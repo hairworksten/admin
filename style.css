@@ -9,6 +9,20 @@ body {
     background-color: #2c2c2c;
     color: #ffffff;
     line-height: 1.6;
+    -webkit-text-size-adjust: 100%;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* フォーム要素は選択可能にする */
+input, textarea {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    -ms-user-select: text;
+    user-select: text;
 }
 
 .screen {
@@ -52,11 +66,17 @@ body {
     background-color: #3a3a3a;
     color: #ffffff;
     font-size: 16px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .login-form input:focus {
     outline: none;
     border-color: #ff6b35;
+    background-color: #4a4a4a;
 }
 
 /* ボタン */
@@ -73,6 +93,13 @@ body {
     align-items: center;
     justify-content: center;
     text-decoration: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .btn-primary {
@@ -217,6 +244,81 @@ body {
     text-align: center;
 }
 
+/* 検索フォーム */
+.search-container {
+    margin-bottom: 20px;
+}
+
+.search-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    max-width: 800px;
+}
+
+.search-form input[type="text"] {
+    padding: 12px;
+    border: 2px solid #555;
+    border-radius: 8px;
+    background-color: #4a4a4a;
+    color: #ffffff;
+    font-size: 16px;
+    width: 100%;
+}
+
+.search-form input[type="text"]:focus {
+    outline: none;
+    border-color: #ff6b35;
+}
+
+.date-range-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.date-range-container input[type="date"] {
+    padding: 12px;
+    border: 2px solid #555;
+    border-radius: 8px;
+    background-color: #4a4a4a;
+    color: #ffffff;
+    font-size: 16px;
+    flex: 1;
+    min-width: 150px;
+}
+
+.date-range-container input[type="date"]:focus {
+    outline: none;
+    border-color: #ff6b35;
+}
+
+.date-range-container span {
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.search-form .btn {
+    align-self: flex-start;
+    margin-right: 10px;
+}
+
+@media (min-width: 768px) {
+    .search-form {
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    .search-form input[type="text"] {
+        flex: 2;
+    }
+    
+    .date-range-container {
+        flex: 1;
+    }
+}
+
 /* 予約リスト */
 .reservations-list {
     display: grid;
@@ -287,14 +389,14 @@ body {
 }
 
 /* フォーム */
-.password-form, .holiday-form, .menu-form {
+.password-form, .holiday-form, .menu-form, .template-form {
     display: flex;
     flex-direction: column;
     gap: 15px;
     max-width: 500px;
 }
 
-.password-form input, .holiday-form input, .menu-form input, .menu-form textarea {
+.password-form input, .holiday-form input, .menu-form input, .menu-form textarea, .template-form input, .template-form textarea {
     padding: 12px;
     border: 2px solid #555;
     border-radius: 8px;
@@ -303,9 +405,15 @@ body {
     font-size: 16px;
 }
 
-.password-form input:focus, .holiday-form input:focus, .menu-form input:focus, .menu-form textarea:focus {
+.password-form input:focus, .holiday-form input:focus, .menu-form input:focus, .menu-form textarea:focus, .template-form input:focus, .template-form textarea:focus {
     outline: none;
     border-color: #ff6b35;
+}
+
+/* メールテンプレートの本文入力ボックスの縦幅を大きく */
+#template-main {
+    min-height: 150px;
+    resize: vertical;
 }
 
 /* 定休日リスト */
@@ -378,15 +486,51 @@ body {
     color: #ff6b35;
 }
 
-.menu-worktime {
+.menu-worktime, .menu-fare {
     background-color: #ff6b35;
     color: #ffffff;
     padding: 5px 10px;
     border-radius: 20px;
     font-size: 0.9em;
+    margin-left: 5px;
 }
 
 .menu-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* テンプレートリスト */
+.templates-list {
+    display: grid;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.template-item {
+    background-color: #4a4a4a;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #555;
+}
+
+.template-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.template-title {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: #ff6b35;
+}
+
+.template-actions {
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
@@ -527,16 +671,39 @@ body {
 .error-message {
     color: #dc3545;
     font-size: 14px;
-    margin-top: 10px;
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 5px;
+    background-color: rgba(220, 53, 69, 0.1);
+    border: 1px solid #dc3545;
     display: none;
+    text-align: center;
 }
 
 .error-message.show {
-    display: block;
+    display: block !important;
 }
 
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
+    .login-container {
+        padding: 20px;
+    }
+    
+    .login-container h1 {
+        font-size: 2em;
+    }
+    
+    .login-form {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .login-form input, .btn {
+        font-size: 16px; /* iOSでズームを防ぐ */
+        min-height: 44px; /* タッチしやすいサイズ */
+    }
+    
     .tab-container {
         padding: 10px;
     }
