@@ -1,3 +1,4 @@
+/* リセットとベーススタイル */
 * {
     margin: 0;
     padding: 0;
@@ -25,6 +26,7 @@ input, textarea {
     user-select: text;
 }
 
+/* 画面とレイアウト */
 .screen {
     min-height: 100vh;
     display: flex;
@@ -79,7 +81,7 @@ input, textarea {
     background-color: #4a4a4a;
 }
 
-/* ボタン */
+/* ボタン共通スタイル */
 .btn {
     padding: 12px 24px;
     border: none;
@@ -98,7 +100,6 @@ input, textarea {
     appearance: none;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
-    width: 100%;
     box-sizing: border-box;
 }
 
@@ -143,6 +144,7 @@ input, textarea {
     padding: 8px 16px;
     font-size: 14px;
     min-height: 36px;
+    width: auto;
 }
 
 /* ナビゲーション */
@@ -160,7 +162,11 @@ input, textarea {
     color: #ff6b35;
 }
 
-/* タブ */
+.nav-buttons .btn {
+    width: auto;
+}
+
+/* タブナビゲーション */
 .tab-container {
     flex: 1;
     padding: 20px;
@@ -184,6 +190,8 @@ input, textarea {
     transition: all 0.3s ease;
     flex: 1;
     min-width: 120px;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
 }
 
 .tab-btn.active {
@@ -244,6 +252,11 @@ input, textarea {
     text-align: center;
 }
 
+.population-control .btn {
+    width: auto;
+    min-width: 50px;
+}
+
 /* 検索フォーム */
 .search-container {
     margin-bottom: 20px;
@@ -302,21 +315,7 @@ input, textarea {
 .search-form .btn {
     align-self: flex-start;
     margin-right: 10px;
-}
-
-@media (min-width: 768px) {
-    .search-form {
-        flex-direction: row;
-        align-items: center;
-    }
-    
-    .search-form input[type="text"] {
-        flex: 2;
-    }
-    
-    .date-range-container {
-        flex: 1;
-    }
+    width: auto;
 }
 
 /* 予約リスト */
@@ -388,15 +387,23 @@ input, textarea {
     color: #fff;
 }
 
-/* フォーム */
-.password-form, .holiday-form, .menu-form, .template-form {
+/* フォーム共通スタイル */
+.password-form, 
+.holiday-form, 
+.menu-form, 
+.template-form {
     display: flex;
     flex-direction: column;
     gap: 15px;
     max-width: 500px;
 }
 
-.password-form input, .holiday-form input, .menu-form input, .menu-form textarea, .template-form input, .template-form textarea {
+.password-form input, 
+.holiday-form input, 
+.menu-form input, 
+.menu-form textarea, 
+.template-form input, 
+.template-form textarea {
     padding: 12px;
     border: 2px solid #555;
     border-radius: 8px;
@@ -405,12 +412,25 @@ input, textarea {
     font-size: 16px;
 }
 
-.password-form input:focus, .holiday-form input:focus, .menu-form input:focus, .menu-form textarea:focus, .template-form input:focus, .template-form textarea:focus {
+.password-form input:focus, 
+.holiday-form input:focus, 
+.menu-form input:focus, 
+.menu-form textarea:focus, 
+.template-form input:focus, 
+.template-form textarea:focus {
     outline: none;
     border-color: #ff6b35;
 }
 
-/* メールテンプレートの本文入力ボックスの縦幅を大きく */
+.holiday-form .btn,
+.menu-form .btn,
+.template-form .btn,
+.password-form .btn {
+    width: auto;
+    align-self: flex-start;
+}
+
+/* メールテンプレートの本文入力ボックス */
 #template-main {
     min-height: 150px;
     resize: vertical;
@@ -486,7 +506,8 @@ input, textarea {
     color: #ff6b35;
 }
 
-.menu-worktime, .menu-fare {
+.menu-worktime, 
+.menu-fare {
     background-color: #ff6b35;
     color: #ffffff;
     padding: 5px 10px;
@@ -578,6 +599,10 @@ input, textarea {
     flex-wrap: wrap;
 }
 
+.modal-buttons .btn {
+    width: auto;
+}
+
 /* メール関連 */
 .mail-templates {
     margin-bottom: 20px;
@@ -627,7 +652,8 @@ input, textarea {
     gap: 15px;
 }
 
-.mail-form input, .mail-form textarea {
+.mail-form input, 
+.mail-form textarea {
     padding: 12px;
     border: 2px solid #555;
     border-radius: 8px;
@@ -641,7 +667,8 @@ input, textarea {
     resize: vertical;
 }
 
-.mail-form input:focus, .mail-form textarea:focus {
+.mail-form input:focus, 
+.mail-form textarea:focus {
     outline: none;
     border-color: #ff6b35;
 }
@@ -684,7 +711,27 @@ input, textarea {
     display: block !important;
 }
 
-/* レスポンシブ対応 */
+/* デスクトップ用レスポンシブ */
+@media (min-width: 769px) {
+    .search-form {
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    .search-form input[type="text"] {
+        flex: 2;
+    }
+    
+    .date-range-container {
+        flex: 1;
+    }
+    
+    .btn {
+        width: auto;
+    }
+}
+
+/* モバイル用レスポンシブ */
 @media (max-width: 768px) {
     .login-container {
         padding: 20px;
@@ -699,7 +746,8 @@ input, textarea {
         max-width: 100%;
     }
     
-    .login-form input, .btn {
+    .login-form input, 
+    .login-form .btn {
         font-size: 16px; /* iOSでズームを防ぐ */
         min-height: 44px; /* タッチしやすいサイズ */
     }
@@ -718,5 +766,30 @@ input, textarea {
     
     .navbar h1 {
         font-size: 1.5em;
+    }
+    
+    .tabs {
+        gap: 5px;
+    }
+    
+    .tab-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+        min-width: 100px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+    
+    .reservation-actions {
+        justify-content: center;
+    }
+    
+    .menu-actions,
+    .template-actions,
+    .holiday-actions {
+        justify-content: center;
     }
 }
