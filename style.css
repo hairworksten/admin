@@ -1,4 +1,90 @@
-/* Hair Works天 予約サイト - 完全版スタイルシート */
+/* アクセス情報 */
+.access-info {
+    background: #1a2a42;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    border: 1px solid #ff8c42;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.access-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.access-section {
+    padding: 15px;
+    background: rgba(255, 140, 66, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid #ff8c42;
+}
+
+.access-subtitle {
+    font-size: 16px;
+    font-weight: bold;
+    color: #ff8c42;
+    margin-bottom: 10px;
+}
+
+.access-text {
+    color: #ffffff;
+    line-height: 1.6;
+    font-size: 14px;
+    margin-bottom: 0;
+}
+
+.navigation-note {
+    margin-top: 15px;
+    padding: 12px;
+    background: rgba(255, 140, 66, 0.1);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 140, 66, 0.3);
+}
+
+.note-title {
+    font-weight: bold;
+    color: #ff8c42;
+    margin-bottom: 5px;
+    font-size: 13px;
+}
+
+.note-text {
+    color: #ffffff;
+    font-size: 13px;
+    line-height: 1.5;
+    margin-bottom: 0;
+}
+
+.parking-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(76, 175, 80, 0.05));
+    border-radius: 8px;
+    border: 2px solid #4CAF50;
+}
+
+.parking-icon {
+    font-size: 20px;
+}
+
+.parking-text {
+    color: #4CAF50;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.section-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #ff8c42;
+    margin-bottom: 20px;
+    text-align: center;
+}/* Hair Works天 予約サイト - 完全版スタイルシート */
 
 /* ベースリセット & Safari対応 */
 * {
@@ -166,31 +252,28 @@ body {
 .shop-name {
     font-size: 26px;
     font-weight: bold;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     color: #ffffff;
     text-align: center;
 }
 
-.shop-image {
-    margin: 20px 0;
+.shop-subtitle {
+    font-size: 16px;
+    color: #ff8c42;
     text-align: center;
+    margin-bottom: 10px;
+    font-weight: bold;
 }
 
-.shop-photo {
-    width: 100%;
-    max-width: 400px;
-    height: 200px;
-    object-fit: cover;
-    border-radius: 10px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-    border: 2px solid #ff8c42;
-    transition: transform 0.2s ease;
-    image-rendering: -webkit-optimize-contrast;
-    image-rendering: crisp-edges;
-}
-
-.shop-photo:hover {
-    transform: translateY(-2px);
+.shop-catchphrase {
+    font-size: 15px;
+    color: #ffffff;
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: rgba(255, 140, 66, 0.1);
+    border-radius: 8px;
+    border: 1px solid #ff8c42;
 }
 
 .shop-address {
@@ -222,8 +305,8 @@ body {
     background: #e67a35;
 }
 
-/* 店舗説明セクション */
-.shop-description {
+/* 重要なお知らせ */
+.important-notices {
     background: #1a2a42;
     padding: 25px;
     border-radius: 10px;
@@ -232,57 +315,88 @@ body {
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
-.section-title {
-    font-size: 20px;
-    font-weight: bold;
-    color: #ff8c42;
-    margin-bottom: 20px;
-    text-align: center;
-}
-
-.description-content p {
-    color: #ffffff;
-    margin-bottom: 15px;
-    line-height: 1.7;
-    font-size: 15px;
-}
-
-/* 営業時間・定休日 */
-.business-info {
-    background: #1a2a42;
-    padding: 25px;
-    border-radius: 10px;
-    margin-bottom: 30px;
-    border: 1px solid #ff8c42;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-}
-
-.business-details {
+.notice-content {
     display: flex;
     flex-direction: column;
     gap: 15px;
 }
 
-.business-item {
+.notice-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 15px;
+    background: rgba(255, 140, 66, 0.05);
+    border-radius: 8px;
+    border-left: 3px solid #ff8c42;
+}
+
+.notice-icon {
+    font-size: 18px;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.notice-text {
+    color: #ffffff;
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+/* 営業時間 */
+.business-hours {
+    background: #1a2a42;
+    padding: 25px;
+    border-radius: 10px;
+    margin-bottom: 30px;
+    border: 1px solid #ff8c42;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.hours-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+}
+
+.hours-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(255, 140, 66, 0.2);
+    padding: 12px 15px;
+    background: #243552;
+    border-radius: 8px;
+    border-left: 4px solid #ff8c42;
 }
 
-.business-item:last-child {
-    border-bottom: none;
+.hours-item.weekend {
+    border-left-color: #4CAF50;
+    background: rgba(76, 175, 80, 0.1);
 }
 
-.business-label {
+.hours-item.holiday {
+    border-left-color: #FF9800;
+    background: rgba(255, 152, 0, 0.1);
+}
+
+.day-label {
     font-weight: bold;
     color: #ffffff;
+    font-size: 15px;
 }
 
-.business-value {
+.time-value {
     color: #ff8c42;
     font-weight: bold;
+    font-size: 15px;
+}
+
+.hours-item.weekend .time-value {
+    color: #4CAF50;
+}
+
+.hours-item.holiday .time-value {
+    color: #FF9800;
 }
 
 /* メイン予約ボタン */
@@ -1158,6 +1272,76 @@ body {
         font-size: 13px !important;
         padding: 10px !important;
     }
+    
+    /* 新しい要素のモバイル対応 */
+    .shop-subtitle {
+        font-size: 14px !important;
+    }
+    
+    .shop-catchphrase {
+        font-size: 13px !important;
+        padding: 8px !important;
+    }
+    
+    .notice-item {
+        padding: 12px !important;
+        gap: 10px !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    
+    .notice-icon {
+        font-size: 16px !important;
+        align-self: flex-start !important;
+    }
+    
+    .notice-text {
+        font-size: 13px !important;
+    }
+    
+    .hours-item {
+        padding: 10px 12px !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 5px !important;
+    }
+    
+    .day-label,
+    .time-value {
+        font-size: 14px !important;
+    }
+    
+    .access-section {
+        padding: 12px !important;
+    }
+    
+    .access-subtitle {
+        font-size: 15px !important;
+    }
+    
+    .access-text {
+        font-size: 13px !important;
+    }
+    
+    .navigation-note {
+        margin-top: 10px !important;
+        padding: 10px !important;
+    }
+    
+    .note-title,
+    .note-text {
+        font-size: 12px !important;
+    }
+    
+    .parking-info {
+        padding: 12px !important;
+        flex-direction: column !important;
+        gap: 5px !important;
+    }
+    
+    .parking-text {
+        font-size: 14px !important;
+    }
 }
 
 @media screen and (max-width: 480px) {
@@ -1179,10 +1363,84 @@ body {
         font-size: 11px !important;
     }
     
-    .business-item {
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 5px !important;
+    /* 新しい要素の極小画面対応 */
+    .shop-name {
+        font-size: 22px !important;
+    }
+    
+    .shop-subtitle {
+        font-size: 13px !important;
+    }
+    
+    .shop-catchphrase {
+        font-size: 12px !important;
+        padding: 6px !important;
+    }
+    
+    .important-notices,
+    .business-hours,
+    .access-info {
+        padding: 15px !important;
+        margin-bottom: 20px !important;
+    }
+    
+    .section-title {
+        font-size: 18px !important;
+        margin-bottom: 15px !important;
+    }
+    
+    .notice-item {
+        padding: 10px !important;
+        gap: 8px !important;
+    }
+    
+    .notice-text {
+        font-size: 12px !important;
+        line-height: 1.5 !important;
+    }
+    
+    .hours-item {
+        padding: 8px 10px !important;
+    }
+    
+    .day-label,
+    .time-value {
+        font-size: 13px !important;
+    }
+    
+    .access-section {
+        padding: 10px !important;
+    }
+    
+    .access-subtitle {
+        font-size: 14px !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .access-text {
+        font-size: 12px !important;
+    }
+    
+    .navigation-note {
+        margin-top: 8px !important;
+        padding: 8px !important;
+    }
+    
+    .note-title,
+    .note-text {
+        font-size: 11px !important;
+    }
+    
+    .parking-info {
+        padding: 10px !important;
+    }
+    
+    .parking-icon {
+        font-size: 18px !important;
+    }
+    
+    .parking-text {
+        font-size: 13px !important;
     }
 }
 
