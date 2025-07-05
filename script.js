@@ -6,6 +6,7 @@ let currentUser = null;
 let reservations = [];
 let mailTemplates = {};
 let currentMailRecipient = '';
+let currentCustomerName = '';
 let currentMenus = {};
 let currentTemplates = {};
 
@@ -455,17 +456,18 @@ function renderReservationsList(reservationsList, type) {
     return reservationsList.map(reservation => {
         const statusText = getStatusText(reservation.states);
         const statusClass = getStatusClass(reservation.states);
+        const customerName = `${reservation['Name-f'] || ''} ${reservation['Name-s'] || ''}`;
         
         let actionsHTML = '';
         if (type === 'today') {
             actionsHTML = `
                 <button class="btn btn-success btn-small" onclick="handleVisit('${reservation.id}')">来店</button>
                 <button class="btn btn-danger btn-small" onclick="handleCancel('${reservation.id}')">キャンセル</button>
-                <button class="btn btn-secondary btn-small" onclick="openMailModal('${reservation.mail}')">メール送信</button>
+                <button class="btn btn-secondary btn-small" onclick="openMailModal('${reservation.mail}', '${customerName}')">メール送信</button>
             `;
         } else {
             actionsHTML = `
-                <button class="btn btn-secondary btn-small" onclick="openMailModal('${reservation.mail}')">メール送信</button>
+                <button class="btn btn-secondary btn-small" onclick="openMailModal('${reservation.mail}', '${customerName}')">メール送信</button>
             `;
         }
 
@@ -477,7 +479,7 @@ function renderReservationsList(reservationsList, type) {
                 </div>
                 <div class="reservation-info">
                     <div><strong>日付:</strong> ${reservation.date}</div>
-                    <div><strong>名前:</strong> ${reservation['Name-f'] || ''} ${reservation['Name-s'] || ''}</div>
+                    <div><strong>名前:</strong> ${customerName}</div>
                     <div><strong>メニュー:</strong> ${reservation.Menu || ''}</div>
                     <div><strong>作業時間:</strong> ${reservation.WorkTime || ''}分</div>
                     <div><strong>メール:</strong> ${reservation.mail || ''}</div>
@@ -706,10 +708,17 @@ async function handleDeleteTemplate(name) {
 }
 
 // メールモーダル開く
-function openMailModal(email) {
+function openMailModal(email, customerName = '') {
     currentMailRecipient = email;
+    currentCustomerName = customerName;
     mailSubjectInput.value = '';
     mailBodyInput.value = '';
+    
+    // 同行者チェック
+    if (email === '同行者') {
+        alert('この方は同行者のため、メールを送信できません。');
+        return;
+    }
     
     mailTemplatesListDiv.innerHTML = Object.keys(mailTemplates).map(templateName => {
         const template = mailTemplates[templateName];
@@ -740,6 +749,7 @@ function selectMailTemplate(templateName) {
 function closeMailModal() {
     mailModal.classList.remove('active');
     currentMailRecipient = '';
+    currentCustomerName = '';
 }
 
 // メール送信
@@ -752,6 +762,16 @@ async function handleSendMail() {
         return;
     }
 
+    // 同行者チェック
+    if (currentMailRecipient === '同行者') {
+        alert('この方は同行者のため、メールを送信できません。');
+        return;
+    }
+
+    // 送信ボタンを無効化
+    sendMailBtn.disabled = true;
+    sendMailBtn.textContent = '送信中...';
+
     try {
         const response = await fetch(`${API_BASE_URL}/send-mail`, {
             method: 'POST',
@@ -761,7 +781,8 @@ async function handleSendMail() {
             body: JSON.stringify({
                 to_email: currentMailRecipient,
                 subject: subject,
-                body: body
+                body: body,
+                customer_name: currentCustomerName
             })
         });
 
@@ -771,11 +792,15 @@ async function handleSendMail() {
             alert('メールを送信しました。');
             closeMailModal();
         } else {
-            alert('メール送信に失敗しました。');
+            alert(`メール送信に失敗しました。\n${data.error || '不明なエラーが発生しました。'}`);
         }
     } catch (error) {
         console.error('Error sending mail:', error);
-        alert('メール送信エラーが発生しました。');
+        alert('メール送信エラーが発生しました。ネットワーク接続を確認してください。');
+    } finally {
+        // 送信ボタンを再有効化
+        sendMailBtn.disabled = false;
+        sendMailBtn.textContent = '送信';
     }
 }
 
@@ -1168,14 +1193,4 @@ function showConfirm(title, message, onConfirm) {
 // 確認モーダル閉じる
 function closeConfirmModal() {
     confirmModal.classList.remove('active');
-}
-
-// メニューフォームリセット
-function resetMenuForm() {
-    menuNameInput.value = '';
-    menuTextInput.value = '';
-    menuWorktimeInput.value = '';
-    menuFareInput.value = '';
-    addMenuBtn.textContent = '追加';
-    addMenuBtn.onclick = handleAddMenu;
 }
