@@ -31,6 +31,7 @@
     <div class="tab-container">
         <div class="tabs">
             <button class="tab-btn active" data-tab="home">ホーム</button>
+            <button class="tab-btn" data-tab="calendar">予約確認</button>
             <button class="tab-btn" data-tab="reservations">予約履歴</button>
             <button class="tab-btn" data-tab="settings">設定</button>
         </div>
@@ -49,6 +50,21 @@
             <div class="section">
                 <h2>予約一覧（来店前）</h2>
                 <div id="today-reservations" class="reservations-list"></div>
+            </div>
+        </div>
+
+        <div id="calendar-tab" class="tab-content">
+            <div class="section">
+                <h2>予約カレンダー</h2>
+                <div class="calendar-controls">
+                    <button id="prev-month-btn" class="btn btn-secondary">前月</button>
+                    <span id="current-month-year" class="month-year"></span>
+                    <button id="next-month-btn" class="btn btn-secondary">次月</button>
+                </div>
+                <div id="calendar-container" class="calendar-container">
+                    <div id="calendar-grid" class="calendar-grid"></div>
+                </div>
+                <div id="menu-legend" class="menu-legend"></div>
             </div>
         </div>
 
@@ -142,6 +158,43 @@
         <div class="modal-buttons">
             <button id="confirm-yes-btn" class="btn btn-primary">はい</button>
             <button id="confirm-no-btn" class="btn btn-secondary">いいえ</button>
+        </div>
+    </div>
+</div>
+
+<div id="reservation-detail-modal" class="modal">
+    <div class="modal-content">
+        <h3>予約詳細</h3>
+        <div class="reservation-detail">
+            <div class="detail-item">
+                <span class="detail-label">予約番号:</span>
+                <span id="detail-id" class="detail-value"></span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">日付:</span>
+                <span id="detail-date" class="detail-value"></span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">時間:</span>
+                <span id="detail-time" class="detail-value"></span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">名前:</span>
+                <span id="detail-name" class="detail-value"></span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">予約メニュー:</span>
+                <span id="detail-menu" class="detail-value"></span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">メールアドレス:</span>
+                <span id="detail-email" class="detail-value"></span>
+            </div>
+        </div>
+        <div class="modal-buttons">
+            <button id="detail-cancel-btn" class="btn btn-danger">キャンセル</button>
+            <button id="detail-mail-btn" class="btn btn-secondary">メール送信</button>
+            <button id="detail-close-btn" class="btn btn-primary">閉じる</button>
         </div>
     </div>
 </div>
