@@ -1,5 +1,4 @@
 <!DOCTYPE html>
-
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -20,185 +19,390 @@
         </div>
     </div>
 
-<div id="main-screen" class="screen hidden">
-    <nav class="navbar">
-        <h1>予約管理システム</h1>
-        <div class="nav-buttons">
-            <button id="logout-btn" class="btn btn-secondary">ログアウト</button>
-        </div>
-    </nav>
+    <div id="main-screen" class="screen hidden">
+        <nav class="navbar">
+            <h1>予約管理システム</h1>
+            <div class="nav-buttons">
+                <button id="logout-btn" class="btn btn-secondary">ログアウト</button>
+            </div>
+        </nav>
 
-    <div class="tab-container">
-        <div class="tabs">
-            <button class="tab-btn active" data-tab="home">ホーム</button>
-            <button class="tab-btn" data-tab="calendar">予約確認</button>
-            <button class="tab-btn" data-tab="reservations">予約履歴</button>
-            <button class="tab-btn" data-tab="settings">設定</button>
-        </div>
-
-        <div id="home-tab" class="tab-content active">
-            <div class="section">
-                <h2>サイネージの更新</h2>
-                <div class="population-control">
-                    <span>現在の待ち人数: </span>
-                    <span id="current-population">0</span>
-                    <button id="population-minus" class="btn btn-primary">-</button>
-                    <button id="population-plus" class="btn btn-primary">+</button>
-                </div>
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="home">ホーム</button>
+                <button class="tab-btn" data-tab="calendar">予約確認</button>
+                <button class="tab-btn" data-tab="reservations">予約履歴</button>
+                <button class="tab-btn" data-tab="settings">設定</button>
             </div>
 
-            <div class="section">
-                <h2>予約一覧（来店前）</h2>
-                <div id="today-reservations" class="reservations-list"></div>
-            </div>
-        </div>
-
-        <div id="calendar-tab" class="tab-content">
-            <div class="section">
-                <h2>予約カレンダー</h2>
-                <div class="calendar-controls">
-                    <button id="prev-month-btn" class="btn btn-secondary">前月</button>
-                    <span id="current-month-year" class="month-year"></span>
-                    <button id="next-month-btn" class="btn btn-secondary">次月</button>
-                </div>
-                <div id="calendar-container" class="calendar-container">
-                    <div id="calendar-grid" class="calendar-grid"></div>
-                </div>
-                <div id="menu-legend" class="menu-legend"></div>
-            </div>
-        </div>
-
-        <div id="reservations-tab" class="tab-content">
-            <div class="section">
-                <h2>予約履歴</h2>
-                <div class="search-container">
-                    <div class="search-form">
-                        <input type="text" id="search-text" placeholder="名前、メニュー、メールアドレスで検索">
-                        <div class="date-range-container">
-                            <input type="date" id="search-date-from" placeholder="開始日">
-                            <span>～</span>
-                            <input type="date" id="search-date-to" placeholder="終了日">
-                        </div>
-                        <button id="search-btn" class="btn btn-primary">検索</button>
-                        <button id="clear-search-btn" class="btn btn-secondary">クリア</button>
+            <div id="home-tab" class="tab-content active">
+                <div class="section">
+                    <h2>サイネージの更新</h2>
+                    <div class="population-control">
+                        <span>現在の待ち人数: </span>
+                        <span id="current-population">0</span>
+                        <button id="population-minus" class="btn btn-primary">-</button>
+                        <button id="population-plus" class="btn btn-primary">+</button>
                     </div>
                 </div>
-                <div id="reservation-history" class="reservations-list"></div>
-            </div>
-        </div>
 
-        <div id="settings-tab" class="tab-content">
-            <div class="section">
-                <h2>休業日設定</h2>
-                <div class="holiday-form">
-                    <input type="date" id="holiday-date">
-                    <button id="add-holiday-btn" class="btn btn-primary">追加</button>
+                <div class="section">
+                    <h2>予約一覧（来店前）</h2>
+                    <div id="today-reservations" class="reservations-list"></div>
                 </div>
-                <div id="holiday-message" class="message"></div>
-                <div id="holidays-list" class="holidays-list"></div>
             </div>
 
-            <div class="section">
-                <h2>メニュー管理</h2>
-                <div class="menu-form">
-                    <input type="text" id="menu-name" placeholder="メニュー名">
-                    <textarea id="menu-text" placeholder="説明"></textarea>
-                    <input type="number" id="menu-worktime" placeholder="作業時間（分）">
-                    <input type="number" id="menu-fare" placeholder="料金（円）">
-                    <button id="add-menu-btn" class="btn btn-primary">追加</button>
+            <div id="calendar-tab" class="tab-content">
+                <div class="section">
+                    <h2>予約カレンダー</h2>
+                    <div class="calendar-controls">
+                        <button id="prev-month-btn" class="btn btn-secondary">前月</button>
+                        <span id="current-month-year" class="month-year"></span>
+                        <button id="next-month-btn" class="btn btn-secondary">次月</button>
+                    </div>
+                    <div id="calendar-container" class="calendar-container">
+                        <div id="calendar-grid" class="calendar-grid"></div>
+                    </div>
+                    <div id="menu-legend" class="menu-legend"></div>
                 </div>
-                <div id="menus-list" class="menus-list"></div>
             </div>
 
-            <div class="section">
-                <h2>メールテンプレート管理</h2>
-                <div class="template-form">
-                    <input type="text" id="template-title" placeholder="件名">
-                    <textarea id="template-main" placeholder="本文"></textarea>
-                    <button id="add-template-btn" class="btn btn-primary">追加</button>
+            <div id="reservations-tab" class="tab-content">
+                <div class="section">
+                    <h2>予約履歴</h2>
+                    <div class="search-container">
+                        <div class="search-form">
+                            <input type="text" id="search-text" placeholder="名前、メニュー、メールアドレスで検索">
+                            <div class="date-range-container">
+                                <input type="date" id="search-date-from" placeholder="開始日">
+                                <span>～</span>
+                                <input type="date" id="search-date-to" placeholder="終了日">
+                            </div>
+                            <button id="search-btn" class="btn btn-primary">検索</button>
+                            <button id="clear-search-btn" class="btn btn-secondary">クリア</button>
+                        </div>
+                    </div>
+                    <div id="reservation-history" class="reservations-list"></div>
                 </div>
-                <div id="templates-list" class="templates-list"></div>
             </div>
 
-            <div class="section">
-                <h2>パスワード変更</h2>
-                <div class="password-form">
-                    <input type="password" id="old-password" placeholder="現在のパスワード">
-                    <input type="password" id="new-password" placeholder="新しいパスワード">
-                    <input type="password" id="confirm-password" placeholder="新しいパスワード（確認）">
-                    <button id="change-password-btn" class="btn btn-primary">変更</button>
+            <div id="settings-tab" class="tab-content">
+                <div class="section">
+                    <h2>休業日設定</h2>
+                    <div class="holiday-form">
+                        <input type="date" id="holiday-date">
+                        <button id="add-holiday-btn" class="btn btn-primary">追加</button>
+                    </div>
+                    <div id="holiday-message" class="message"></div>
+                    <div id="holidays-list" class="holidays-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>メニュー管理</h2>
+                    <div class="menu-form">
+                        <input type="text" id="menu-name" placeholder="メニュー名">
+                        <textarea id="menu-text" placeholder="説明"></textarea>
+                        <input type="number" id="menu-worktime" placeholder="作業時間（分）">
+                        <input type="number" id="menu-fare" placeholder="料金（円）">
+                        <button id="add-menu-btn" class="btn btn-primary">追加</button>
+                    </div>
+                    <div id="menus-list" class="menus-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>メールテンプレート管理</h2>
+                    <div class="template-form">
+                        <input type="text" id="template-title" placeholder="件名">
+                        <textarea id="template-main" placeholder="本文"></textarea>
+                        <button id="add-template-btn" class="btn btn-primary">追加</button>
+                    </div>
+                    <div id="templates-list" class="templates-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>パスワード変更</h2>
+                    <div class="password-form">
+                        <input type="password" id="old-password" placeholder="現在のパスワード">
+                        <input type="password" id="new-password" placeholder="新しいパスワード">
+                        <input type="password" id="confirm-password" placeholder="新しいパスワード（確認）">
+                        <button id="change-password-btn" class="btn btn-primary">変更</button>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<div id="mail-modal" class="modal">
-    <div class="modal-content">
-        <h3>メール送信</h3>
-        <div class="mail-templates">
-            <h4>定型文</h4>
-            <div id="mail-templates-list"></div>
+    <div id="mail-modal" class="modal">
+        <div class="modal-content">
+            <h3>メール送信</h3>
+            <div class="mail-templates">
+                <h4>定型文</h4>
+                <div id="mail-templates-list"></div>
+            </div>
+            <div class="mail-form">
+                <input type="text" id="mail-subject" placeholder="件名">
+                <textarea id="mail-body" placeholder="本文"></textarea>
+                <div class="modal-buttons">
+                    <button id="send-mail-btn" class="btn btn-primary">送信</button>
+                    <button id="cancel-mail-btn" class="btn btn-secondary">キャンセル</button>
+                </div>
+            </div>
         </div>
-        <div class="mail-form">
-            <input type="text" id="mail-subject" placeholder="件名">
-            <textarea id="mail-body" placeholder="本文"></textarea>
+    </div>
+
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="confirm-title">確認</h3>
+            <p id="confirm-message"></p>
             <div class="modal-buttons">
-                <button id="send-mail-btn" class="btn btn-primary">送信</button>
-                <button id="cancel-mail-btn" class="btn btn-secondary">キャンセル</button>
+                <button id="confirm-yes-btn" class="btn btn-primary">はい</button>
+                <button id="confirm-no-btn" class="btn btn-secondary">いいえ</button>
             </div>
         </div>
     </div>
-</div>
 
-<div id="confirm-modal" class="modal">
-    <div class="modal-content">
-        <h3 id="confirm-title">確認</h3>
-        <p id="confirm-message"></p>
-        <div class="modal-buttons">
-            <button id="confirm-yes-btn" class="btn btn-primary">はい</button>
-            <button id="confirm-no-btn" class="btn btn-secondary">いいえ</button>
+    <div id="reservation-detail-modal" class="modal">
+        <div class="modal-content">
+            <h3>予約詳細</h3>
+            <div class="reservation-detail">
+                <div class="detail-item">
+                    <span class="detail-label">予約番号:</span>
+                    <span id="detail-id" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">日付:</span>
+                    <span id="detail-date" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">時間:</span>
+                    <span id="detail-time" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">名前:</span>
+                    <span id="detail-name" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">予約メニュー:</span>
+                    <span id="detail-menu" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">メールアドレス:</span>
+                    <span id="detail-email" class="detail-value"></span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="detail-cancel-btn" class="btn btn-danger">キャンセル</button>
+                <button id="detail-mail-btn" class="btn btn-secondary">メール送信</button>
+                <button id="detail-close-btn" class="btn btn-primary">閉じる</button>
+            </div>
         </div>
     </div>
-</div>
 
-<div id="reservation-detail-modal" class="modal">
-    <div class="modal-content">
-        <h3>予約詳細</h3>
-        <div class="reservation-detail">
-            <div class="detail-item">
-                <span class="detail-label">予約番号:</span>
-                <span id="detail-id" class="detail-value"></span>
+    <script src="auth.js"></script>
+    <script src="main-features.js"></script>
+    <script src="calendar.js"></script>
+    <script src="modals.js"></script>
+</body>
+</html><!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>予約管理システム</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="login-screen" class="screen">
+        <div class="login-container">
+            <h1>予約管理システム</h1>
+            <div class="login-form">
+                <input type="text" id="user-id" placeholder="ユーザーID">
+                <input type="password" id="password" placeholder="パスワード">
+                <button id="login-btn" class="btn btn-primary">ログイン</button>
             </div>
-            <div class="detail-item">
-                <span class="detail-label">日付:</span>
-                <span id="detail-date" class="detail-value"></span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">時間:</span>
-                <span id="detail-time" class="detail-value"></span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">名前:</span>
-                <span id="detail-name" class="detail-value"></span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">予約メニュー:</span>
-                <span id="detail-menu" class="detail-value"></span>
-            </div>
-            <div class="detail-item">
-                <span class="detail-label">メールアドレス:</span>
-                <span id="detail-email" class="detail-value"></span>
-            </div>
-        </div>
-        <div class="modal-buttons">
-            <button id="detail-cancel-btn" class="btn btn-danger">キャンセル</button>
-            <button id="detail-mail-btn" class="btn btn-secondary">メール送信</button>
-            <button id="detail-close-btn" class="btn btn-primary">閉じる</button>
+            <div id="login-error" class="error-message"></div>
         </div>
     </div>
-</div>
 
-<script src="script.js"></script>
+    <div id="main-screen" class="screen hidden">
+        <nav class="navbar">
+            <h1>予約管理システム</h1>
+            <div class="nav-buttons">
+                <button id="logout-btn" class="btn btn-secondary">ログアウト</button>
+            </div>
+        </nav>
+
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="home">ホーム</button>
+                <button class="tab-btn" data-tab="calendar">予約確認</button>
+                <button class="tab-btn" data-tab="reservations">予約履歴</button>
+                <button class="tab-btn" data-tab="settings">設定</button>
+            </div>
+
+            <div id="home-tab" class="tab-content active">
+                <div class="section">
+                    <h2>サイネージの更新</h2>
+                    <div class="population-control">
+                        <span>現在の待ち人数: </span>
+                        <span id="current-population">0</span>
+                        <button id="population-minus" class="btn btn-primary">-</button>
+                        <button id="population-plus" class="btn btn-primary">+</button>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>予約一覧（来店前）</h2>
+                    <div id="today-reservations" class="reservations-list"></div>
+                </div>
+            </div>
+
+            <div id="calendar-tab" class="tab-content">
+                <div class="section">
+                    <h2>予約カレンダー</h2>
+                    <div class="calendar-controls">
+                        <button id="prev-month-btn" class="btn btn-secondary">前月</button>
+                        <span id="current-month-year" class="month-year"></span>
+                        <button id="next-month-btn" class="btn btn-secondary">次月</button>
+                    </div>
+                    <div id="calendar-container" class="calendar-container">
+                        <div id="calendar-grid" class="calendar-grid"></div>
+                    </div>
+                    <div id="menu-legend" class="menu-legend"></div>
+                </div>
+            </div>
+
+            <div id="reservations-tab" class="tab-content">
+                <div class="section">
+                    <h2>予約履歴</h2>
+                    <div class="search-container">
+                        <div class="search-form">
+                            <input type="text" id="search-text" placeholder="名前、メニュー、メールアドレスで検索">
+                            <div class="date-range-container">
+                                <input type="date" id="search-date-from" placeholder="開始日">
+                                <span>～</span>
+                                <input type="date" id="search-date-to" placeholder="終了日">
+                            </div>
+                            <button id="search-btn" class="btn btn-primary">検索</button>
+                            <button id="clear-search-btn" class="btn btn-secondary">クリア</button>
+                        </div>
+                    </div>
+                    <div id="reservation-history" class="reservations-list"></div>
+                </div>
+            </div>
+
+            <div id="settings-tab" class="tab-content">
+                <div class="section">
+                    <h2>休業日設定</h2>
+                    <div class="holiday-form">
+                        <input type="date" id="holiday-date">
+                        <button id="add-holiday-btn" class="btn btn-primary">追加</button>
+                    </div>
+                    <div id="holiday-message" class="message"></div>
+                    <div id="holidays-list" class="holidays-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>メニュー管理</h2>
+                    <div class="menu-form">
+                        <input type="text" id="menu-name" placeholder="メニュー名">
+                        <textarea id="menu-text" placeholder="説明"></textarea>
+                        <input type="number" id="menu-worktime" placeholder="作業時間（分）">
+                        <input type="number" id="menu-fare" placeholder="料金（円）">
+                        <button id="add-menu-btn" class="btn btn-primary">追加</button>
+                    </div>
+                    <div id="menus-list" class="menus-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>メールテンプレート管理</h2>
+                    <div class="template-form">
+                        <input type="text" id="template-title" placeholder="件名">
+                        <textarea id="template-main" placeholder="本文"></textarea>
+                        <button id="add-template-btn" class="btn btn-primary">追加</button>
+                    </div>
+                    <div id="templates-list" class="templates-list"></div>
+                </div>
+
+                <div class="section">
+                    <h2>パスワード変更</h2>
+                    <div class="password-form">
+                        <input type="password" id="old-password" placeholder="現在のパスワード">
+                        <input type="password" id="new-password" placeholder="新しいパスワード">
+                        <input type="password" id="confirm-password" placeholder="新しいパスワード（確認）">
+                        <button id="change-password-btn" class="btn btn-primary">変更</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="mail-modal" class="modal">
+        <div class="modal-content">
+            <h3>メール送信</h3>
+            <div class="mail-templates">
+                <h4>定型文</h4>
+                <div id="mail-templates-list"></div>
+            </div>
+            <div class="mail-form">
+                <input type="text" id="mail-subject" placeholder="件名">
+                <textarea id="mail-body" placeholder="本文"></textarea>
+                <div class="modal-buttons">
+                    <button id="send-mail-btn" class="btn btn-primary">送信</button>
+                    <button id="cancel-mail-btn" class="btn btn-secondary">キャンセル</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content">
+            <h3 id="confirm-title">確認</h3>
+            <p id="confirm-message"></p>
+            <div class="modal-buttons">
+                <button id="confirm-yes-btn" class="btn btn-primary">はい</button>
+                <button id="confirm-no-btn" class="btn btn-secondary">いいえ</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="reservation-detail-modal" class="modal">
+        <div class="modal-content">
+            <h3>予約詳細</h3>
+            <div class="reservation-detail">
+                <div class="detail-item">
+                    <span class="detail-label">予約番号:</span>
+                    <span id="detail-id" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">日付:</span>
+                    <span id="detail-date" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">時間:</span>
+                    <span id="detail-time" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">名前:</span>
+                    <span id="detail-name" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">予約メニュー:</span>
+                    <span id="detail-menu" class="detail-value"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">メールアドレス:</span>
+                    <span id="detail-email" class="detail-value"></span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button id="detail-cancel-btn" class="btn btn-danger">キャンセル</button>
+                <button id="detail-mail-btn" class="btn btn-secondary">メール送信</button>
+                <button id="detail-close-btn" class="btn btn-primary">閉じる</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
