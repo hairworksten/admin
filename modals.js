@@ -221,7 +221,7 @@ async function handlePasswordChange() {
     }
 }
 
-// 定休日表示
+// 修正版：定休日表示処理
 function displayHolidays(holidays) {
     if (!holidaysListDiv) return;
     
@@ -233,7 +233,8 @@ function displayHolidays(holidays) {
     const sortedHolidays = holidays.sort((a, b) => new Date(a) - new Date(b));
     
     holidaysListDiv.innerHTML = sortedHolidays.map(holiday => {
-        const date = new Date(holiday);
+        // 修正：タイムゾーンを考慮した日付表示
+        const date = new Date(holiday + 'T00:00:00'); // ローカルタイムゾーンで解釈
         const formattedDate = date.toLocaleDateString('ja-JP', {
             year: 'numeric',
             month: 'long',
@@ -252,7 +253,7 @@ function displayHolidays(holidays) {
     }).join('');
 }
 
-// 定休日追加
+// 修正版：定休日追加処理
 async function handleAddHoliday() {
     const date = holidayDateInput ? holidayDateInput.value : '';
 
@@ -273,7 +274,8 @@ async function handleAddHoliday() {
         console.error('Error checking existing holidays:', error);
     }
 
-    const selectedDate = new Date(date);
+    // 修正：タイムゾーンを考慮した日付比較
+    const selectedDate = new Date(date + 'T00:00:00'); // ローカルタイムゾーンで解釈
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
@@ -300,6 +302,12 @@ async function handleAddHoliday() {
                 weekday: 'short'
             });
             showSuccessMessage(`${formattedDate}を休業日に設定しました`);
+            
+            // カレンダーも再描画
+            const calendarTab = document.getElementById('calendar-tab');
+            if (calendarTab && calendarTab.classList.contains('active')) {
+                renderCalendar();
+            }
         } else {
             throw new Error('追加に失敗しました');
         }
@@ -309,9 +317,10 @@ async function handleAddHoliday() {
     }
 }
 
-// 定休日削除
+// 修正版：定休日削除処理
 async function handleDeleteHoliday(date) {
-    const formattedDate = new Date(date).toLocaleDateString('ja-JP', {
+    const selectedDate = new Date(date + 'T00:00:00'); // ローカルタイムゾーンで解釈
+    const formattedDate = selectedDate.toLocaleDateString('ja-JP', {
         year: 'numeric',
         month: 'long',
         day: 'numeric',
@@ -330,6 +339,12 @@ async function handleDeleteHoliday(date) {
                 if (response.ok) {
                     await loadHolidays();
                     showSuccessMessage('休業日を削除しました');
+                    
+                    // カレンダーも再描画
+                    const calendarTab = document.getElementById('calendar-tab');
+                    if (calendarTab && calendarTab.classList.contains('active')) {
+                        renderCalendar();
+                    }
                 } else {
                     throw new Error('削除に失敗しました');
                 }
