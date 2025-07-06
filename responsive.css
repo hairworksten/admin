@@ -167,3 +167,113 @@
         margin: 5px 0;
     }
 }
+
+/* 既存のresponsive.cssのモバイル部分に以下を追加・修正してください */
+
+@media (max-width: 768px) {
+    /* 既存のカレンダー部分を以下のように置き換え */
+    
+    /* カレンダーモバイル対応（見切れ防止） */
+    .calendar-container {
+        width: 100%;
+        overflow-x: auto; /* 横スクロールを有効化 */
+        -webkit-overflow-scrolling: touch; /* iOSでスムーズスクロール */
+        margin-bottom: 30px;
+        /* スクロールバーのスタイリング */
+        scrollbar-width: thin;
+        scrollbar-color: #ff6b35 #3a3a3a;
+    }
+    
+    .calendar-container::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .calendar-container::-webkit-scrollbar-track {
+        background: #3a3a3a;
+        border-radius: 3px;
+    }
+    
+    .calendar-container::-webkit-scrollbar-thumb {
+        background: #ff6b35;
+        border-radius: 3px;
+    }
+    
+    .calendar-container::-webkit-scrollbar-thumb:hover {
+        background: #e55a2d;
+    }
+    
+    .calendar-grid {
+        min-width: 400px; /* 最小幅を設定してグリッドが潰れるのを防ぐ */
+        width: 100%;
+        grid-template-columns: repeat(7, minmax(55px, 1fr)); /* 各列の最小幅を設定 */
+    }
+    
+    .calendar-day-header {
+        padding: 8px 2px;
+        font-size: 12px;
+        min-width: 55px; /* ヘッダーの最小幅 */
+    }
+    
+    .calendar-day {
+        min-height: 80px; /* モバイルでは高さを少し小さく */
+        min-width: 55px; /* 各日付セルの最小幅 */
+        padding: 3px;
+    }
+    
+    .reservation-item-calendar {
+        font-size: 9px; /* さらに小さく */
+        padding: 1px 3px;
+        margin-bottom: 1px;
+    }
+    
+    .day-number {
+        font-size: 11px;
+        margin-bottom: 3px;
+    }
+    
+    .holiday-label {
+        font-size: 8px;
+    }
+    
+    .calendar-controls {
+        flex-direction: row; /* モバイルでも横並び */
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .calendar-controls .btn {
+        min-width: 60px;
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+}
+
+/* 極小画面対応（320px以下） - 新規追加 */
+@media (max-width: 320px) {
+    .calendar-grid {
+        min-width: 350px; /* より小さい画面でも見切れを防ぐ */
+        grid-template-columns: repeat(7, minmax(50px, 1fr));
+    }
+    
+    .calendar-day {
+        min-width: 50px;
+        min-height: 70px;
+    }
+    
+    .calendar-day-header {
+        min-width: 50px;
+        padding: 6px 1px;
+        font-size: 11px;
+    }
+    
+    .reservation-item-calendar {
+        font-size: 8px;
+        padding: 1px 2px;
+    }
+    
+    .day-number {
+        font-size: 10px;
+    }
+}
