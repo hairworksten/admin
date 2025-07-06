@@ -1,0 +1,169 @@
+/* デスクトップ用レスポンシブ */
+@media (min-width: 769px) {
+    .search-form {
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    .search-form input[type="text"] {
+        flex: 2;
+    }
+    
+    .date-range-container {
+        flex: 1;
+    }
+    
+    .btn {
+        width: auto;
+    }
+    
+    .calendar-controls {
+        justify-content: center;
+        gap: 30px;
+    }
+    
+    .calendar-day {
+        min-height: 140px;
+    }
+    
+    .reservation-item-calendar {
+        font-size: 12px;
+        padding: 4px 6px;
+    }
+    
+    .legend-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+}
+
+/* モバイル用レスポンシブ */
+@media (max-width: 768px) {
+    .login-container {
+        padding: 20px;
+    }
+    
+    .login-container h1 {
+        font-size: 2em;
+    }
+    
+    .login-form {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .login-form input, 
+    .login-form .btn {
+        font-size: 16px; /* iOSでズームを防ぐ */
+        min-height: 44px; /* タッチしやすいサイズ */
+    }
+    
+    .tab-container {
+        padding: 10px;
+    }
+    
+    .section {
+        padding: 20px;
+    }
+    
+    .navbar {
+        padding: 10px 20px;
+    }
+    
+    .navbar h1 {
+        font-size: 1.5em;
+    }
+    
+    .tabs {
+        gap: 5px;
+    }
+    
+    .tab-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+        min-width: 80px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+    
+    .reservation-actions {
+        justify-content: center;
+    }
+    
+    .menu-actions,
+    .template-actions,
+    .holiday-actions {
+        justify-content: center;
+    }
+    
+    /* カレンダーモバイル対応 */
+    .calendar-day {
+        min-height: 100px;
+    }
+    
+    .reservation-item-calendar {
+        font-size: 10px;
+        padding: 2px 4px;
+    }
+    
+    .day-number {
+        font-size: 12px;
+    }
+    
+    .month-year {
+        font-size: 1.2em;
+    }
+    
+    .calendar-controls {
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .legend-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+    
+    .detail-label {
+        min-width: 100px;
+        margin-right: 10px;
+    }
+    
+    /* 人数コントロールモバイル対応 */
+    .population-control {
+        justify-content: center;
+        text-align: center;
+    }
+    
+    #current-population {
+        font-size: 1.8em;
+    }
+    
+    /* フォームモバイル対応 */
+    .password-form, 
+    .holiday-form, 
+    .menu-form, 
+    .template-form {
+        max-width: 100%;
+    }
+    
+    .search-form {
+        max-width: 100%;
+    }
+    
+    .date-range-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .date-range-container input[type="date"] {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .date-range-container span {
+        text-align: center;
+        margin: 5px 0;
+    }
+}
