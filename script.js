@@ -1,6 +1,34 @@
 // APIベースURL
 const API_BASE_URL = 'https://reservation-api-36382648212.asia-northeast1.run.app/api';
 
+// メニューカラー定義（8色に拡張）
+const MENU_COLORS = [
+    '#ff6b35', // オレンジ
+    '#28a745', // グリーン  
+    '#dc3545', // レッド
+    '#6f42c1', // パープル
+    '#20c997', // ティール
+    '#fd7e14', // ブラウン
+    '#007bff', // ブルー
+    '#ffc107'  // イエロー
+];
+
+// ユーティリティ関数
+function getMenuColorByIndex(index) {
+    return MENU_COLORS[index % MENU_COLORS.length];
+}
+
+function getMenuColor(menuName) {
+    // メニュー一覧からインデックスを取得
+    const menuNames = Object.keys(currentMenus);
+    const index = menuNames.indexOf(menuName);
+    if (index >= 0) {
+        return getMenuColorByIndex(index);
+    }
+    // 見つからない場合は最後の色を使用
+    return MENU_COLORS[MENU_COLORS.length - 1];
+}
+
 // グローバル変数
 let currentUser = null;
 let reservations = [];
@@ -9,6 +37,8 @@ let currentMailRecipient = '';
 let currentCustomerName = '';
 let currentMenus = {};
 let currentTemplates = {};
+let currentDate = new Date();
+let currentReservationDetail = null;
 
 // DOM要素の取得
 const loginScreen = document.getElementById('login-screen');
@@ -31,6 +61,13 @@ const populationPlusBtn = document.getElementById('population-plus');
 // 予約表示エリア
 const todayReservationsDiv = document.getElementById('today-reservations');
 const reservationHistoryDiv = document.getElementById('reservation-history');
+
+// カレンダー関連
+const calendarGrid = document.getElementById('calendar-grid');
+const currentMonthYear = document.getElementById('current-month-year');
+const prevMonthBtn = document.getElementById('prev-month-btn');
+const nextMonthBtn = document.getElementById('next-month-btn');
+const menuLegend = document.getElementById('menu-legend');
 
 // 検索関連
 const searchTextInput = document.getElementById('search-text');
@@ -68,6 +105,7 @@ const templatesListDiv = document.getElementById('templates-list');
 // モーダル関連
 const mailModal = document.getElementById('mail-modal');
 const confirmModal = document.getElementById('confirm-modal');
+const reservationDetailModal = document.getElementById('reservation-detail-modal');
 const mailTemplatesListDiv = document.getElementById('mail-templates-list');
 const mailSubjectInput = document.getElementById('mail-subject');
 const mailBodyInput = document.getElementById('mail-body');
@@ -77,6 +115,17 @@ const confirmYesBtn = document.getElementById('confirm-yes-btn');
 const confirmNoBtn = document.getElementById('confirm-no-btn');
 const confirmTitle = document.getElementById('confirm-title');
 const confirmMessage = document.getElementById('confirm-message');
+
+// 予約詳細モーダル関連
+const detailId = document.getElementById('detail-id');
+const detailDate = document.getElementById('detail-date');
+const detailTime = document.getElementById('detail-time');
+const detailName = document.getElementById('detail-name');
+const detailMenu = document.getElementById('detail-menu');
+const detailEmail = document.getElementById('detail-email');
+const detailCancelBtn = document.getElementById('detail-cancel-btn');
+const detailMailBtn = document.getElementById('detail-mail-btn');
+const detailCloseBtn = document.getElementById('detail-close-btn');
 
 // 初期化
 document.addEventListener('DOMContentLoaded', function() {
@@ -128,6 +177,10 @@ function initializeEventListeners() {
     populationMinusBtn.addEventListener('click', () => updatePopulation(-1));
     populationPlusBtn.addEventListener('click', () => updatePopulation(1));
 
+    // カレンダー関連
+    prevMonthBtn.addEventListener('click', goToPrevMonth);
+    nextMonthBtn.addEventListener('click', goToNextMonth);
+
     // パスワード変更
     changePasswordBtn.addEventListener('click', handlePasswordChange);
 
@@ -144,6 +197,9 @@ function initializeEventListeners() {
     cancelMailBtn.addEventListener('click', closeMailModal);
     sendMailBtn.addEventListener('click', handleSendMail);
     confirmNoBtn.addEventListener('click', closeConfirmModal);
+    detailCloseBtn.addEventListener('click', closeReservationDetailModal);
+    detailCancelBtn.addEventListener('click', handleDetailCancel);
+    detailMailBtn.addEventListener('click', handleDetailMail);
 
     // モーダル外クリックで閉じる
     mailModal.addEventListener('click', function(e) {
@@ -155,6 +211,12 @@ function initializeEventListeners() {
     confirmModal.addEventListener('click', function(e) {
         if (e.target === confirmModal) {
             closeConfirmModal();
+        }
+    });
+
+    reservationDetailModal.addEventListener('click', function(e) {
+        if (e.target === reservationDetailModal) {
+            closeReservationDetailModal();
         }
     });
 
@@ -318,7 +380,291 @@ function switchTab(tabName) {
     if (activeTab && activeContent) {
         activeTab.classList.add('active');
         activeContent.classList.add('active');
+        
+        // カレンダータブが選択された場合はカレンダーを描画
+        if (tabName === 'calendar') {
+            renderCalendar();
+            renderMenuLegend(); // メニューの有無に関わらず常に表示
+        }
     }
+}
+
+// カレンダー描画
+function renderCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    // 月年表示を更新
+    const monthNames = ['1月', '2月', '3月', '4月', '5月', '6月', 
+                       '7月', '8月', '9月', '10月', '11月', '12月'];
+    currentMonthYear.textContent = `${year}年 ${monthNames[month]}`;
+    
+    // 月の最初の日と最後の日を取得
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    
+    // 月の最初の日が月曜日になるように調整
+    const dayOfWeek = firstDay.getDay();
+    const startDateOffset = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    startDate.setDate(firstDay.getDate() - startDateOffset);
+    
+    // カレンダーグリッドをクリア
+    calendarGrid.innerHTML = '';
+    
+    // 曜日ヘッダーを追加
+    const weekdays = ['月', '火', '水', '木', '金', '土', '日'];
+    weekdays.forEach(day => {
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'calendar-day-header';
+        dayHeader.textContent = day;
+        calendarGrid.appendChild(dayHeader);
+    });
+    
+    // カレンダーの日付を生成
+    const currentDateObj = new Date(startDate);
+    for (let i = 0; i < 42; i++) { // 6週間分
+        const dayElement = document.createElement('div');
+        dayElement.className = 'calendar-day';
+        
+        const dateString = currentDateObj.toISOString().split('T')[0];
+        const dayNumber = currentDateObj.getDate();
+        
+        // 現在の月でない日は薄く表示
+        if (currentDateObj.getMonth() !== month) {
+            dayElement.classList.add('other-month');
+        }
+        
+        // 日付番号を表示
+        const dayNumberElement = document.createElement('div');
+        dayNumberElement.className = 'day-number';
+        dayNumberElement.textContent = dayNumber;
+        dayElement.appendChild(dayNumberElement);
+        
+        // 予約リストを表示
+        const reservationsContainer = document.createElement('div');
+        reservationsContainer.className = 'day-reservations';
+        
+        // その日の予約を取得（states=0のもののみ）
+        const dayReservations = reservations.filter(r => 
+            r.date === dateString && r.states === 0
+        ).sort((a, b) => a.Time.localeCompare(b.Time));
+        
+        dayReservations.forEach(reservation => {
+            const reservationElement = document.createElement('button');
+            reservationElement.className = 'reservation-item-calendar';
+            
+            const customerName = `${reservation['Name-f'] || ''} ${reservation['Name-s'] || ''}`.trim();
+            reservationElement.textContent = `${reservation.Time} ${customerName}`;
+            
+            // メニューに基づいて色を設定
+            const menuColor = getMenuColor(reservation.Menu);
+            reservationElement.style.backgroundColor = menuColor;
+            reservationElement.style.color = '#ffffff';
+            
+            // クリックイベントを追加
+            reservationElement.addEventListener('click', () => {
+                showReservationDetail(reservation);
+            });
+            
+            reservationsContainer.appendChild(reservationElement);
+        });
+        
+        dayElement.appendChild(reservationsContainer);
+        calendarGrid.appendChild(dayElement);
+        
+        currentDateObj.setDate(currentDateObj.getDate() + 1);
+    }
+}
+
+// メニュー凡例描画
+function renderMenuLegend() {
+    if (!menuLegend) {
+        console.log('menuLegend element not found');
+        return;
+    }
+    
+    menuLegend.innerHTML = '<h4>メニュー凡例</h4>';
+    
+    const legendGrid = document.createElement('div');
+    legendGrid.className = 'legend-grid';
+    
+    // Cloud Firestoreのmenusから取得したメニューを使用
+    const menuNames = Object.keys(currentMenus);
+    console.log('Available menus:', menuNames); // デバッグ用
+    
+    if (menuNames.length > 0) {
+        menuNames.forEach((menuName, index) => {
+            const color = getMenuColorByIndex(index);
+            
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            
+            const colorBox = document.createElement('div');
+            colorBox.className = 'legend-color';
+            colorBox.style.backgroundColor = color;
+            
+            const menuNameSpan = document.createElement('span');
+            menuNameSpan.textContent = menuName;
+            
+            legendItem.appendChild(colorBox);
+            legendItem.appendChild(menuNameSpan);
+            legendGrid.appendChild(legendItem);
+        });
+    } else {
+        // メニューが登録されていない場合のメッセージ
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'legend-empty';
+        emptyMessage.textContent = 'メニューが登録されていません';
+        legendGrid.appendChild(emptyMessage);
+    }
+    
+    menuLegend.appendChild(legendGrid);
+    console.log('Legend rendered with', menuNames.length, 'menus'); // デバッグ用
+}
+
+// 前月に移動
+function goToPrevMonth() {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderCalendar();
+}
+
+// 次月に移動
+function goToNextMonth() {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar();
+}
+
+// 予約詳細表示
+function showReservationDetail(reservation) {
+    currentReservationDetail = reservation;
+    
+    const customerName = `${reservation['Name-f'] || ''} ${reservation['Name-s'] || ''}`.trim();
+    
+    detailId.textContent = reservation.id;
+    detailDate.textContent = reservation.date;
+    detailTime.textContent = reservation.Time;
+    detailName.textContent = customerName;
+    detailMenu.textContent = reservation.Menu || '';
+    detailEmail.textContent = reservation.mail || '';
+    
+    reservationDetailModal.classList.add('active');
+}
+
+// 予約詳細モーダルを閉じる
+function closeReservationDetailModal() {
+    reservationDetailModal.classList.remove('active');
+    currentReservationDetail = null;
+}
+
+// 詳細画面からキャンセル
+function handleDetailCancel() {
+    if (!currentReservationDetail) return;
+    
+    // キャンセル対象の予約情報を保存（モーダルを閉じる前に）
+    const reservationToCancel = { ...currentReservationDetail };
+    
+    // 詳細モーダルを閉じる
+    closeReservationDetailModal();
+    
+    // 確認モーダルを表示
+    showConfirm('予約キャンセル', '本当にこの予約をキャンセルしますか？', async () => {
+        try {
+            console.log('キャンセル処理開始:', reservationToCancel.id);
+            
+            const response = await fetch(`${API_BASE_URL}/reservations/${reservationToCancel.id}/status`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ status: 2 })
+            });
+
+            console.log('キャンセル処理レスポンス:', response.status, response.ok);
+
+            if (response.ok) {
+                // 予約データを再読み込み
+                await loadReservations();
+                
+                // カレンダータブがアクティブの場合はカレンダーを再描画
+                const calendarTab = document.getElementById('calendar-tab');
+                if (calendarTab && calendarTab.classList.contains('active')) {
+                    renderCalendar();
+                }
+                
+                console.log('予約がキャンセルされました:', reservationToCancel.id);
+                alert('予約をキャンセルしました。');
+            } else {
+                const errorData = await response.text();
+                console.error('キャンセル処理エラー:', response.status, errorData);
+                alert(`予約のキャンセルに失敗しました。\nステータス: ${response.status}\nエラー: ${errorData}`);
+            }
+        } catch (error) {
+            console.error('キャンセル処理例外:', error);
+            
+            // ローカル開発環境の場合の処理
+            if (error.message.includes('fetch')) {
+                alert('ローカル開発環境のため、APIに接続できません。\n実際の本番環境では正常に動作します。');
+                
+                // デモ用：ローカルで予約をキャンセル状態に更新
+                const reservationIndex = reservations.findIndex(r => r.id === reservationToCancel.id);
+                if (reservationIndex >= 0) {
+                    reservations[reservationIndex].states = 2;
+                    displayReservations();
+                    
+                    // カレンダータブがアクティブの場合はカレンダーを再描画
+                    const calendarTab = document.getElementById('calendar-tab');
+                    if (calendarTab && calendarTab.classList.contains('active')) {
+                        renderCalendar();
+                    }
+                    
+                    alert('デモ用：予約をキャンセルしました（ローカルのみ）');
+                }
+            } else {
+                alert(`予約のキャンセルに失敗しました。\nエラー: ${error.message}`);
+            }
+        }
+    });
+}
+
+// 詳細画面からメール送信
+function handleDetailMail() {
+    if (!currentReservationDetail) return;
+    
+    const customerName = `${currentReservationDetail['Name-f'] || ''} ${currentReservationDetail['Name-s'] || ''}`.trim();
+    const email = currentReservationDetail.mail || '';
+    
+    // 詳細モーダルを閉じる
+    closeReservationDetailModal();
+    
+    // 同行者チェック
+    if (email === '同行者') {
+        alert('この方は同行者のため、メールを送信できません。');
+        return;
+    }
+    
+    // メール送信に必要な情報を設定
+    currentMailRecipient = email;
+    currentCustomerName = customerName;
+    mailSubjectInput.value = '';
+    mailBodyInput.value = '';
+    
+    // メールテンプレート一覧を表示
+    mailTemplatesListDiv.innerHTML = Object.keys(mailTemplates).map(templateName => {
+        const template = mailTemplates[templateName];
+        const previewText = template.title.length > 50 ? 
+            template.title.substring(0, 50) + '...' : template.title;
+        
+        return `
+            <div class="mail-template-item" onclick="selectMailTemplate('${templateName}')">
+                <div class="mail-template-name">${templateName}</div>
+                <div class="mail-template-preview">${previewText}</div>
+            </div>
+        `;
+    }).join('');
+
+    // メール送信モーダルを表示
+    mailModal.classList.add('active');
 }
 
 // 人数データ読み込み
@@ -367,6 +713,12 @@ async function loadReservations() {
         }
         
         displayReservations();
+        
+        // カレンダータブがアクティブの場合はカレンダーを再描画
+        const calendarTab = document.getElementById('calendar-tab');
+        if (calendarTab && calendarTab.classList.contains('active')) {
+            renderCalendar();
+        }
     } catch (error) {
         console.error('Error loading reservations:', error);
         reservations = [];
@@ -533,7 +885,7 @@ async function handleVisit(reservationId) {
 
 // キャンセル処理
 function handleCancel(reservationId) {
-    showConfirm('本当にキャンセルしますか？', '', async () => {
+    showConfirm('予約キャンセル', '本当にキャンセルしますか？', async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/status`, {
                 method: 'POST',
@@ -692,7 +1044,7 @@ function resetTemplateForm() {
 
 // テンプレート削除
 async function handleDeleteTemplate(name) {
-    showConfirm('このテンプレートを削除しますか？', '', async () => {
+    showConfirm('テンプレート削除', 'このテンプレートを削除しますか？', async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/mail-templates/${encodeURIComponent(name)}`, {
                 method: 'DELETE'
@@ -1026,6 +1378,7 @@ async function loadMenus() {
 // メニュー表示
 function displayMenus(menus) {
     currentMenus = menus;
+    console.log('Menus loaded:', currentMenus); // デバッグ用
     
     menusListDiv.innerHTML = Object.keys(menus).map((menuName, index) => {
         const menu = menus[menuName];
@@ -1049,6 +1402,13 @@ function displayMenus(menus) {
     }).join('');
     
     attachMenuEventListeners();
+    
+    // カレンダータブがアクティブの場合は凡例を更新
+    const calendarTab = document.getElementById('calendar-tab');
+    if (calendarTab && calendarTab.classList.contains('active')) {
+        console.log('Calendar tab is active, rendering legend'); // デバッグ用
+        renderMenuLegend();
+    }
 }
 
 // メニューのイベントリスナーを設定
@@ -1113,6 +1473,11 @@ async function handleAddMenu() {
         if (response.ok) {
             resetMenuForm();
             await loadMenus();
+            // カレンダータブがアクティブの場合は凡例を更新
+            const calendarTab = document.getElementById('calendar-tab');
+            if (calendarTab && calendarTab.classList.contains('active')) {
+                renderMenuLegend();
+            }
         }
     } catch (error) {
         console.error('Error adding menu:', error);
@@ -1164,7 +1529,7 @@ function resetMenuForm() {
 
 // メニュー削除
 async function handleDeleteMenu(name) {
-    showConfirm('このメニューを削除しますか？', '', async () => {
+    showConfirm('メニュー削除', 'このメニューを削除しますか？', async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/menus/${encodeURIComponent(name)}`, {
                 method: 'DELETE'
