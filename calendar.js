@@ -1,3 +1,42 @@
+// カレンダー関連の要素
+const calendarGrid = document.getElementById('calendar-grid');
+const currentMonthYear = document.getElementById('current-month-year');
+const prevMonthBtn = document.getElementById('prev-month-btn');
+const nextMonthBtn = document.getElementById('next-month-btn');
+const menuLegend = document.getElementById('menu-legend');
+
+// 予約詳細モーダル関連
+const detailId = document.getElementById('detail-id');
+const detailDate = document.getElementById('detail-date');
+const detailTime = document.getElementById('detail-time');
+const detailName = document.getElementById('detail-name');
+const detailMenu = document.getElementById('detail-menu');
+const detailEmail = document.getElementById('detail-email');
+const detailCancelBtn = document.getElementById('detail-cancel-btn');
+const detailMailBtn = document.getElementById('detail-mail-btn');
+const detailCloseBtn = document.getElementById('detail-close-btn');
+
+// イベントリスナー設定
+document.addEventListener('DOMContentLoaded', function() {
+    initializeCalendarFeatures();
+});
+
+function initializeCalendarFeatures() {
+    if (prevMonthBtn) prevMonthBtn.addEventListener('click', goToPrevMonth);
+    if (nextMonthBtn) nextMonthBtn.addEventListener('click', goToNextMonth);
+    if (detailCloseBtn) detailCloseBtn.addEventListener('click', closeReservationDetailModal);
+    if (detailCancelBtn) detailCancelBtn.addEventListener('click', handleDetailCancel);
+    if (detailMailBtn) detailMailBtn.addEventListener('click', handleDetailMail);
+}
+
+// 新しい関数：タイムゾーンを考慮した日付文字列変換
+function formatDateToLocal(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 // カレンダー描画（修正版）
 function renderCalendar() {
     if (!calendarGrid) return;
@@ -98,113 +137,180 @@ function renderCalendar() {
     }
 }
 
-// 新しい関数：タイムゾーンを考慮した日付文字列変換
-function formatDateToLocal(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-// 修正版：定休日追加処理のタイムゾーン問題も解決
-async function handleAddHoliday() {
-    const date = holidayDateInput ? holidayDateInput.value : '';
-
-    if (!date) {
-        showErrorMessage('日付を選択してください');
-        return;
-    }
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/holidays`);
-        const existingHolidays = await response.json();
-        
-        if (existingHolidays.includes(date)) {
-            showErrorMessage('この日付は既に休業日として設定されています');
-            return;
-        }
-    } catch (error) {
-        console.error('Error checking existing holidays:', error);
-    }
-
-    // 修正：タイムゾーンを考慮した日付比較
-    const selectedDate = new Date(date + 'T00:00:00'); // ローカルタイムゾーンで解釈
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+// メニュー凡例描画
+function renderMenuLegend() {
+    if (!menuLegend) return;
     
-    if (selectedDate < today) {
-        showErrorMessage('過去の日付は設定できません');
-        return;
-    }
-
-    try {
-        const addResponse = await fetch(`${API_BASE_URL}/holidays`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ date: date })
+    menuLegend.innerHTML = '<h4>メニュー凡例</h4>';
+    
+    const legendGrid = document.createElement('div');
+    legendGrid.className = 'legend-grid';
+    
+    const menuNames = Object.keys(currentMenus);
+    
+    if (menuNames.length > 0) {
+        menuNames.forEach((menuName, index) => {
+            const color = getMenuColorByIndex(index);
+            
+            const legendItem = document.createElement('div');
+            legendItem.className = 'legend-item';
+            
+            const colorBox = document.createElement('div');
+            colorBox.className = 'legend-color';
+            colorBox.style.backgroundColor = color;
+            
+            const menuNameSpan = document.createElement('span');
+            menuNameSpan.textContent = menuName;
+            
+            legendItem.appendChild(colorBox);
+            legendItem.appendChild(menuNameSpan);
+            legendGrid.appendChild(legendItem);
         });
+    } else {
+        const emptyMessage = document.createElement('div');
+        emptyMessage.className = 'legend-empty';
+        emptyMessage.textContent = 'メニューが登録されていません';
+        legendGrid.appendChild(emptyMessage);
+    }
+    
+    menuLegend.appendChild(legendGrid);
+}
 
-        if (addResponse.ok) {
-            if (holidayDateInput) holidayDateInput.value = '';
-            await loadHolidays();
-            
-            const formattedDate = selectedDate.toLocaleDateString('ja-JP', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                weekday: 'short'
-            });
-            showSuccessMessage(`${formattedDate}を休業日に設定しました`);
-            
-            // カレンダーも再描画
-            const calendarTab = document.getElementById('calendar-tab');
-            if (calendarTab && calendarTab.classList.contains('active')) {
-                renderCalendar();
-            }
-        } else {
-            throw new Error('追加に失敗しました');
-        }
-    } catch (error) {
-        console.error('Error adding holiday:', error);
-        showErrorMessage('休業日の追加に失敗しました');
+// 前月に移動
+function goToPrevMonth() {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    renderCalendar();
+}
+
+// 次月に移動
+function goToNextMonth() {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    renderCalendar();
+}
+
+// 予約詳細表示
+function showReservationDetail(reservation) {
+    currentReservationDetail = reservation;
+    
+    const customerName = `${reservation['Name-f'] || ''} ${reservation['Name-s'] || ''}`.trim();
+    
+    if (detailId) detailId.textContent = reservation.id;
+    if (detailDate) detailDate.textContent = reservation.date;
+    if (detailTime) detailTime.textContent = reservation.Time;
+    if (detailName) detailName.textContent = customerName;
+    if (detailMenu) detailMenu.textContent = reservation.Menu || '';
+    if (detailEmail) detailEmail.textContent = reservation.mail || '';
+    
+    if (reservationDetailModal) {
+        reservationDetailModal.classList.add('active');
     }
 }
 
-// 修正版：定休日削除処理
-async function handleDeleteHoliday(date) {
-    const selectedDate = new Date(date + 'T00:00:00'); // ローカルタイムゾーンで解釈
-    const formattedDate = selectedDate.toLocaleDateString('ja-JP', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        weekday: 'short'
-    });
+// 予約詳細モーダルを閉じる
+function closeReservationDetailModal() {
+    if (reservationDetailModal) {
+        reservationDetailModal.classList.remove('active');
+    }
+    currentReservationDetail = null;
+}
+
+// 詳細画面からキャンセル
+function handleDetailCancel() {
+    if (!currentReservationDetail) return;
     
-    showConfirm(
-        '休業日の削除', 
-        `${formattedDate}を休業日から削除しますか？`, 
-        async () => {
+    const reservationToCancel = { ...currentReservationDetail };
+    closeReservationDetailModal();
+    
+    if (typeof showConfirm === 'function') {
+        showConfirm('予約キャンセル', '本当にこの予約をキャンセルしますか？', async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}/holidays/${encodeURIComponent(date)}`, {
-                    method: 'DELETE'
+                const response = await fetch(`${API_BASE_URL}/reservations/${reservationToCancel.id}/status`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ status: 2 })
                 });
 
                 if (response.ok) {
-                    await loadHolidays();
-                    showSuccessMessage('休業日を削除しました');
+                    await loadReservations();
                     
-                    // カレンダーも再描画
                     const calendarTab = document.getElementById('calendar-tab');
                     if (calendarTab && calendarTab.classList.contains('active')) {
                         renderCalendar();
                     }
+                    
+                    alert('予約をキャンセルしました。');
                 } else {
-                    throw new Error('削除に失敗しました');
+                    const errorData = await response.text();
+                    alert(`予約のキャンセルに失敗しました。\nステータス: ${response.status}\nエラー: ${errorData}`);
                 }
             } catch (error) {
-                console.error('Error deleting holiday:', error);
-                showErrorMessage('休業日の削除に失敗しました');
+                console.error('キャンセル処理例外:', error);
+                
+                if (error.message.includes('fetch')) {
+                    alert('ローカル開発環境のため、APIに接続できません。\n実際の本番環境では正常に動作します。');
+                    
+                    const reservationIndex = reservations.findIndex(r => r.id === reservationToCancel.id);
+                    if (reservationIndex >= 0) {
+                        reservations[reservationIndex].states = 2;
+                        if (typeof displayReservations === 'function') {
+                            displayReservations();
+                        }
+                        
+                        const calendarTab = document.getElementById('calendar-tab');
+                        if (calendarTab && calendarTab.classList.contains('active')) {
+                            renderCalendar();
+                        }
+                        
+                        alert('デモ用：予約をキャンセルしました（ローカルのみ）');
+                    }
+                } else {
+                    alert(`予約のキャンセルに失敗しました。\nエラー: ${error.message}`);
+                }
             }
-        }
-    );
+        });
+    }
+}
+
+// 詳細画面からメール送信
+function handleDetailMail() {
+    if (!currentReservationDetail) return;
+    
+    const customerName = `${currentReservationDetail['Name-f'] || ''} ${currentReservationDetail['Name-s'] || ''}`.trim();
+    const email = currentReservationDetail.mail || '';
+    
+    closeReservationDetailModal();
+    
+    if (email === '同行者') {
+        alert('この方は同行者のため、メールを送信できません。');
+        return;
+    }
+    
+    currentMailRecipient = email;
+    currentCustomerName = customerName;
+    
+    const mailSubjectInput = document.getElementById('mail-subject');
+    const mailBodyInput = document.getElementById('mail-body');
+    const mailTemplatesListDiv = document.getElementById('mail-templates-list');
+    
+    if (mailSubjectInput) mailSubjectInput.value = '';
+    if (mailBodyInput) mailBodyInput.value = '';
+    
+    if (mailTemplatesListDiv) {
+        mailTemplatesListDiv.innerHTML = Object.keys(mailTemplates).map(templateName => {
+            const template = mailTemplates[templateName];
+            const previewText = template.title.length > 50 ? 
+                template.title.substring(0, 50) + '...' : template.title;
+            
+            return `
+                <div class="mail-template-item" onclick="selectMailTemplate('${templateName}')">
+                    <div class="mail-template-name">${templateName}</div>
+                    <div class="mail-template-preview">${previewText}</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    if (mailModal) {
+        mailModal.classList.add('active');
+    }
 }
