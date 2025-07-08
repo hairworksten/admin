@@ -92,6 +92,17 @@
 
             <div id="settings-tab" class="tab-content">
                 <div class="section">
+                    <h2>重要なお知らせ管理</h2>
+                    <div class="notice-form">
+                        <input type="text" id="notice-icon" placeholder="アイコン（絵文字）" maxlength="2">
+                        <textarea id="notice-text" placeholder="お知らせ内容"></textarea>
+                        <button id="add-notice-btn" class="btn btn-primary">追加</button>
+                    </div>
+                    <div id="notice-message" class="message"></div>
+                    <div id="notices-list" class="notices-list"></div>
+                </div>
+
+                <div class="section">
                     <h2>休業日設定</h2>
                     <div class="holiday-form">
                         <input type="date" id="holiday-date">
