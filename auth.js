@@ -29,6 +29,7 @@ let currentTemplates = {};
 let currentDate = new Date();
 let currentReservationDetail = null;
 let holidays = [];
+let notices = []; // 重要なお知らせ用グローバル変数を追加
 
 // DOM要素の取得
 const loginScreen = document.getElementById('login-screen');
@@ -180,6 +181,7 @@ async function loadInitialData() {
     await loadMailTemplates();
     await loadHolidays();
     await loadMenus();
+    await loadNotices(); // 重要なお知らせの読み込みを追加
 }
 
 // 人数データ読み込み
@@ -269,5 +271,25 @@ async function loadMenus() {
         }
     } catch (error) {
         console.error('Error loading menus:', error);
+    }
+}
+
+// 重要なお知らせ読み込み - 新規追加
+async function loadNotices() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/notices`);
+        const data = await response.json();
+        
+        if (data.success && Array.isArray(data.notices)) {
+            notices = data.notices;
+            if (typeof displayNotices === 'function') {
+                displayNotices(notices);
+            }
+        } else {
+            notices = [];
+        }
+    } catch (error) {
+        console.error('Error loading notices:', error);
+        notices = [];
     }
 }
