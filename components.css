@@ -2,7 +2,8 @@
 .password-form, 
 .holiday-form, 
 .menu-form, 
-.template-form {
+.template-form,
+.notice-form {
     display: flex;
     flex-direction: column;
     gap: 15px;
@@ -14,7 +15,9 @@
 .menu-form input, 
 .menu-form textarea, 
 .template-form input, 
-.template-form textarea {
+.template-form textarea,
+.notice-form input,
+.notice-form textarea {
     padding: 12px;
     border: 2px solid #555;
     border-radius: 8px;
@@ -28,7 +31,9 @@
 .menu-form input:focus, 
 .menu-form textarea:focus, 
 .template-form input:focus, 
-.template-form textarea:focus {
+.template-form textarea:focus,
+.notice-form input:focus,
+.notice-form textarea:focus {
     outline: none;
     border-color: #ff6b35;
 }
@@ -36,15 +41,24 @@
 .holiday-form .btn,
 .menu-form .btn,
 .template-form .btn,
-.password-form .btn {
+.password-form .btn,
+.notice-form .btn {
     width: auto;
     align-self: flex-start;
 }
 
-/* メールテンプレートの本文入力ボックス */
-#template-main {
+/* メールテンプレートとお知らせの本文入力ボックス */
+#template-main,
+#notice-text {
     min-height: 150px;
     resize: vertical;
+}
+
+/* お知らせアイコン入力ボックス */
+#notice-icon {
+    max-width: 100px;
+    text-align: center;
+    font-size: 18px;
 }
 
 /* 定休日リスト */
@@ -82,6 +96,69 @@
 }
 
 .holidays-empty {
+    text-align: center;
+    padding: 20px;
+    color: #888;
+    font-style: italic;
+}
+
+/* お知らせリスト */
+.notices-list {
+    display: grid;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.notice-item {
+    background-color: #4a4a4a;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #555;
+    transition: all 0.3s ease;
+}
+
+.notice-item:hover {
+    border-color: #ff6b35;
+    transform: translateY(-1px);
+}
+
+.notice-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.notice-icon-display {
+    font-size: 1.5em;
+    margin-right: 10px;
+    min-width: 40px;
+    text-align: center;
+}
+
+.notice-title {
+    display: flex;
+    align-items: center;
+    flex: 1;
+}
+
+.notice-text-content {
+    color: #ffffff;
+    line-height: 1.6;
+    margin-bottom: 15px;
+    white-space: pre-line;
+    word-wrap: break-word;
+}
+
+.notice-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.notices-empty {
     text-align: center;
     padding: 20px;
     color: #888;
