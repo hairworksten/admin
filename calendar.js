@@ -10,6 +10,7 @@ const detailId = document.getElementById('detail-id');
 const detailDate = document.getElementById('detail-date');
 const detailTime = document.getElementById('detail-time');
 const detailName = document.getElementById('detail-name');
+const detailPhone = document.getElementById('detail-phone');
 const detailMenu = document.getElementById('detail-menu');
 const detailEmail = document.getElementById('detail-email');
 const detailCancelBtn = document.getElementById('detail-cancel-btn');
@@ -115,7 +116,7 @@ function renderCalendar() {
                 const reservationElement = document.createElement('button');
                 reservationElement.className = 'reservation-item-calendar';
                 
-                const customerName = `${reservation['Name-f'] || ''} ${reservation['Name-s'] || ''}`.trim();
+                const customerName = reservation['Name-f'] || '';
                 reservationElement.textContent = `${reservation.Time} ${customerName}`;
                 
                 const menuColor = getMenuColor(reservation.Menu);
@@ -188,18 +189,36 @@ function goToNextMonth() {
     renderCalendar();
 }
 
-// 予約詳細表示
+// 予約詳細表示（電話番号対応版）
 function showReservationDetail(reservation) {
     currentReservationDetail = reservation;
     
-    const customerName = `${reservation['Name-f'] || ''} ${reservation['Name-s'] || ''}`.trim();
+    const customerName = reservation['Name-f'] || '';
+    const phoneNumber = reservation['Name-s'] || '';
+    const email = reservation.mail || '';
     
     if (detailId) detailId.textContent = reservation.id;
     if (detailDate) detailDate.textContent = reservation.date;
     if (detailTime) detailTime.textContent = reservation.Time;
     if (detailName) detailName.textContent = customerName;
+    if (detailPhone) detailPhone.textContent = phoneNumber;
     if (detailMenu) detailMenu.textContent = reservation.Menu || '';
-    if (detailEmail) detailEmail.textContent = reservation.mail || '';
+    if (detailEmail) detailEmail.textContent = email;
+    
+    // 同行者の場合はメールボタンを無効化
+    if (detailMailBtn) {
+        if (email === '同行者') {
+            detailMailBtn.disabled = true;
+            detailMailBtn.textContent = 'メール送信（同行者）';
+            detailMailBtn.style.opacity = '0.5';
+            detailMailBtn.style.cursor = 'not-allowed';
+        } else {
+            detailMailBtn.disabled = false;
+            detailMailBtn.textContent = 'メール送信';
+            detailMailBtn.style.opacity = '1';
+            detailMailBtn.style.cursor = 'pointer';
+        }
+    }
     
     if (reservationDetailModal) {
         reservationDetailModal.classList.add('active');
@@ -275,7 +294,7 @@ function handleDetailCancel() {
 function handleDetailMail() {
     if (!currentReservationDetail) return;
     
-    const customerName = `${currentReservationDetail['Name-f'] || ''} ${currentReservationDetail['Name-s'] || ''}`.trim();
+    const customerName = currentReservationDetail['Name-f'] || '';
     const email = currentReservationDetail.mail || '';
     
     closeReservationDetailModal();
