@@ -34,6 +34,29 @@
     .legend-grid {
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
+    
+    /* デスクトップでは従来通りの横並びレイアウト */
+    .population-control {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-size: 1.2em;
+        flex-wrap: nowrap;
+        justify-content: flex-start;
+    }
+    
+    #current-population {
+        font-size: 2em;
+        font-weight: bold;
+        color: #ff6b35;
+        min-width: 60px;
+        text-align: center;
+    }
+    
+    .population-control .btn {
+        width: auto;
+        min-width: 50px;
+    }
 }
 
 /* モバイル用レスポンシブ */
@@ -98,80 +121,46 @@
         justify-content: center;
     }
     
-    /* カレンダーモバイル対応 */
-    .calendar-day {
-        min-height: 100px;
-    }
-    
-    .reservation-item-calendar {
-        font-size: 10px;
-        padding: 2px 4px;
-    }
-    
-    .day-number {
-        font-size: 12px;
-    }
-    
-    .month-year {
-        font-size: 1.2em;
-    }
-    
-    .calendar-controls {
-        flex-direction: column;
-        gap: 15px;
-    }
-    
-    .legend-grid {
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    }
-    
-    .detail-label {
-        min-width: 100px;
-        margin-right: 10px;
-    }
-    
-    /* 人数コントロールモバイル対応 */
+    /* 人数コントロールのレスポンシブ対応 - 修正版 */
     .population-control {
-        justify-content: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        font-size: 1.2em;
         text-align: center;
+    }
+    
+    .population-display {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: nowrap; /* 改行させない */
+    }
+    
+    .population-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        align-items: center;
     }
     
     #current-population {
         font-size: 1.8em;
-    }
-    
-    /* フォームモバイル対応 */
-    .password-form, 
-    .holiday-form, 
-    .menu-form, 
-    .template-form {
-        max-width: 100%;
-    }
-    
-    .search-form {
-        max-width: 100%;
-    }
-    
-    .date-range-container {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .date-range-container input[type="date"] {
-        min-width: auto;
-        width: 100%;
-    }
-    
-    .date-range-container span {
+        font-weight: bold;
+        color: #ff6b35;
+        min-width: 60px;
         text-align: center;
-        margin: 5px 0;
     }
-}
-
-/* 既存のresponsive.cssのモバイル部分に以下を追加・修正してください */
-
-@media (max-width: 768px) {
-    /* 既存のカレンダー部分を以下のように置き換え */
+    
+    .population-control .btn {
+        width: auto;
+        min-width: 50px;
+        min-height: 50px;
+        font-size: 18px;
+        font-weight: bold;
+    }
     
     /* カレンダーモバイル対応（見切れ防止） */
     .calendar-container {
@@ -248,9 +237,49 @@
         padding: 8px 12px;
         font-size: 14px;
     }
+    
+    .month-year {
+        font-size: 1.2em;
+    }
+    
+    .legend-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+    
+    .detail-label {
+        min-width: 100px;
+        margin-right: 10px;
+    }
+    
+    /* フォームモバイル対応 */
+    .password-form, 
+    .holiday-form, 
+    .menu-form, 
+    .template-form {
+        max-width: 100%;
+    }
+    
+    .search-form {
+        max-width: 100%;
+    }
+    
+    .date-range-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .date-range-container input[type="date"] {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .date-range-container span {
+        text-align: center;
+        margin: 5px 0;
+    }
 }
 
-/* 極小画面対応（320px以下） - 新規追加 */
+/* 極小画面対応（320px以下） */
 @media (max-width: 320px) {
     .calendar-grid {
         min-width: 350px; /* より小さい画面でも見切れを防ぐ */
