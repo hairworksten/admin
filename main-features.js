@@ -148,11 +148,13 @@ function getFilteredReservations() {
     const searchText = searchTextInput ? searchTextInput.value.trim().toLowerCase() : '';
     if (searchText) {
         filteredReservations = filteredReservations.filter(r => {
-            const fullName = `${r['Name-f'] || ''} ${r['Name-s'] || ''}`.toLowerCase();
+            const customerName = (r['Name-f'] || '').toLowerCase();
+            const phoneNumber = (r['Name-s'] || '').toLowerCase();
             const menu = (r.Menu || '').toLowerCase();
             const email = (r.mail || '').toLowerCase();
             
-            return fullName.includes(searchText) ||
+            return customerName.includes(searchText) ||
+                   phoneNumber.includes(searchText) ||
                    menu.includes(searchText) ||
                    email.includes(searchText);
         });
@@ -190,7 +192,7 @@ function handleClearSearch() {
     displayReservations();
 }
 
-// 予約リストHTML生成
+// 予約リストHTML生成（電話番号対応版）
 function renderReservationsList(reservationsList, type) {
     if (reservationsList.length === 0) {
         return '<p>予約がありません。</p>';
@@ -199,18 +201,28 @@ function renderReservationsList(reservationsList, type) {
     return reservationsList.map(reservation => {
         const statusText = getStatusText(reservation.states);
         const statusClass = getStatusClass(reservation.states);
-        const customerName = `${reservation['Name-f'] || ''} ${reservation['Name-s'] || ''}`;
+        const customerName = reservation['Name-f'] || '';
+        const phoneNumber = reservation['Name-s'] || '';
+        const email = reservation.mail || '';
         
         let actionsHTML = '';
         if (type === 'today') {
+            // 同行者の場合はメール送信ボタンを無効化
+            const mailButtonDisabled = email === '同行者' ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '';
+            const mailButtonText = email === '同行者' ? 'メール送信（同行者）' : 'メール送信';
+            
             actionsHTML = `
                 <button class="btn btn-success btn-small" onclick="handleVisit('${reservation.id}')">来店</button>
                 <button class="btn btn-danger btn-small" onclick="handleCancel('${reservation.id}')">キャンセル</button>
-                <button class="btn btn-secondary btn-small" onclick="openMailModal('${reservation.mail}', '${customerName}')">メール送信</button>
+                <button class="btn btn-secondary btn-small" onclick="openMailModal('${email}', '${customerName}')" ${mailButtonDisabled}>${mailButtonText}</button>
             `;
         } else {
+            // 履歴でも同行者の場合はメール送信ボタンを無効化
+            const mailButtonDisabled = email === '同行者' ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '';
+            const mailButtonText = email === '同行者' ? 'メール送信（同行者）' : 'メール送信';
+            
             actionsHTML = `
-                <button class="btn btn-secondary btn-small" onclick="openMailModal('${reservation.mail}', '${customerName}')">メール送信</button>
+                <button class="btn btn-secondary btn-small" onclick="openMailModal('${email}', '${customerName}')" ${mailButtonDisabled}>${mailButtonText}</button>
             `;
         }
 
@@ -222,10 +234,11 @@ function renderReservationsList(reservationsList, type) {
                 </div>
                 <div class="reservation-info">
                     <div><strong>日付:</strong> ${reservation.date}</div>
-                    <div><strong>名前:</strong> ${customerName}</div>
+                    <div><strong>お名前:</strong> ${customerName}</div>
+                    <div><strong>電話番号:</strong> ${phoneNumber}</div>
                     <div><strong>メニュー:</strong> ${reservation.Menu || ''}</div>
                     <div><strong>作業時間:</strong> ${reservation.WorkTime || ''}分</div>
-                    <div><strong>メール:</strong> ${reservation.mail || ''}</div>
+                    <div><strong>メール:</strong> ${email}</div>
                 </div>
                 <div class="reservation-actions">
                     ${actionsHTML}
