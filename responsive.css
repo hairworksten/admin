@@ -41,8 +41,18 @@
         align-items: center;
         gap: 15px;
         font-size: 1.2em;
-        flex-wrap: nowrap;
-        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+    
+    .population-display {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .population-buttons {
+        display: flex;
+        gap: 15px;
     }
     
     #current-population {
