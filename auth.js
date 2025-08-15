@@ -1,5 +1,5 @@
 // APIベースURL
-const API_BASE_URL = 'https://reservation-api-36382648212.asia-northeast1.run.app/api';
+const API_BASE_URL = 'https://reservation-api-knn6yth7rq-an.a.run.app/api';
 
 // メニューカラー定義
 const MENU_COLORS = [
@@ -30,6 +30,7 @@ let currentDate = new Date();
 let currentReservationDetail = null;
 let holidays = [];
 let notices = []; // 重要なお知らせ用グローバル変数を追加
+let breakMode = { turn: false, custom: '' }; // 休憩モード設定用グローバル変数を追加
 
 // DOM要素の取得
 const loginScreen = document.getElementById('login-screen');
@@ -176,12 +177,242 @@ function showLoginScreen() {
 
 // 初期データ読み込み
 async function loadInitialData() {
+    await loadBreakMode(); // 休憩モード読み込みを追加
     await loadPopulation();
     await loadReservations();
     await loadMailTemplates();
     await loadHolidays();
     await loadMenus();
     await loadNotices(); // 重要なお知らせの読み込みを追加
+}
+
+// 休憩モード読み込み - 新規追加
+async function loadBreakMode() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/break-mode`);
+        const data = await response.json();
+        
+        if (data.success) {
+            breakMode = {
+                turn: data.turn,
+                custom: data.custom
+            };
+        } else {
+            breakMode = { turn: false, custom: '' };
+        }
+        
+        // サイネージUIの更新
+        updateSignageDisplay();
+        
+    } catch (error) {
+        console.error('Error loading break mode:', error);
+        breakMode = { turn: false, custom: '' };
+        updateSignageDisplay();
+    }
+}
+
+// サイネージ表示更新 - 新規追加
+function updateSignageDisplay() {
+    const signageSection = document.querySelector('.section h2');
+    if (!signageSection || signageSection.textContent !== 'サイネージの更新') return;
+    
+    const section = signageSection.parentElement;
+    
+    if (breakMode.turn) {
+        // 休憩モード時の表示
+        section.innerHTML = `
+            <h2>サイネージの更新</h2>
+            <div class="break-mode-display">
+                <div class="break-status">
+                    <span style="color: #dc3545; font-size: 1.5em; font-weight: bold;">休憩中</span>
+                </div>
+                <div class="break-message">
+                    <span style="color: #ffffff; font-size: 1.2em;">表示メッセージ：${breakMode.custom}</span>
+                </div>
+                <div class="break-actions" style="margin-top: 20px;">
+                    <button id="resume-business-btn" class="btn btn-success">営業再開</button>
+                </div>
+            </div>
+        `;
+        
+        // 営業再開ボタンのイベントリスナー追加
+        const resumeBtn = document.getElementById('resume-business-btn');
+        if (resumeBtn) {
+            resumeBtn.addEventListener('click', handleResumeBusiness);
+        }
+        
+    } else {
+        // 通常営業時の表示
+        section.innerHTML = `
+            <h2>サイネージの更新</h2>
+            <div class="population-control">
+                <div class="population-display">
+                    <span>現在の待ち人数: </span>
+                    <span id="current-population">0</span>
+                </div>
+                <div class="population-buttons">
+                    <button id="population-minus" class="btn btn-primary">-</button>
+                    <button id="population-plus" class="btn btn-primary">+</button>
+                </div>
+            </div>
+            <div class="break-control" style="margin-top: 20px;">
+                <button id="start-break-btn" class="btn btn-secondary">休憩中</button>
+            </div>
+        `;
+        
+        // 人数変更ボタンのイベントリスナー再設定
+        const populationMinusBtn = document.getElementById('population-minus');
+        const populationPlusBtn = document.getElementById('population-plus');
+        if (populationMinusBtn) populationMinusBtn.addEventListener('click', () => updatePopulation(-1));
+        if (populationPlusBtn) populationPlusBtn.addEventListener('click', () => updatePopulation(1));
+        
+        // 休憩開始ボタンのイベントリスナー追加
+        const startBreakBtn = document.getElementById('start-break-btn');
+        if (startBreakBtn) {
+            startBreakBtn.addEventListener('click', handleStartBreak);
+        }
+        
+        // 人数データを再読み込み
+        loadPopulation();
+    }
+}
+
+// 休憩開始処理 - 新規追加
+function handleStartBreak() {
+    // カスタムメッセージ入力モーダルを表示
+    showBreakMessageModal();
+}
+
+// 休憩メッセージモーダル表示 - 新規追加
+function showBreakMessageModal() {
+    const modalHTML = `
+        <div id="break-message-modal" class="modal active">
+            <div class="modal-content">
+                <h3>休憩メッセージ設定</h3>
+                <div class="break-message-form">
+                    <label for="break-custom-message">カスタムメッセージを入力してください。</label>
+                    <input type="text" id="break-custom-message" placeholder="例：14:00まで休憩中です。">
+                    
+                    <div class="break-templates" style="margin: 20px 0;">
+                        <h4>定型文</h4>
+                        <div class="break-template-buttons" style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-secondary btn-small break-template-btn" data-template="まで休憩中です。">まで休憩中です。</button>
+                            <button class="btn btn-secondary btn-small break-template-btn" data-template="一時的に休憩中です。">一時的に休憩中です。</button>
+                            <button class="btn btn-secondary btn-small break-template-btn" data-template="しばらく休憩いたします。">しばらく休憩いたします。</button>
+                        </div>
+                    </div>
+                    
+                    <div class="modal-buttons">
+                        <button id="update-break-btn" class="btn btn-primary">更新</button>
+                        <button id="cancel-break-btn" class="btn btn-secondary">キャンセル</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 既存のモーダルがある場合は削除
+    const existingModal = document.getElementById('break-message-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // モーダルを追加
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // イベントリスナー設定
+    const customMessageInput = document.getElementById('break-custom-message');
+    const updateBreakBtn = document.getElementById('update-break-btn');
+    const cancelBreakBtn = document.getElementById('cancel-break-btn');
+    const templateBtns = document.querySelectorAll('.break-template-btn');
+    
+    // 定型文ボタンのイベントリスナー
+    templateBtns.forEach(btn => {
+        btn.addEventListener('click', function() {
+            const template = this.dataset.template;
+            if (customMessageInput) {
+                customMessageInput.value = template;
+            }
+        });
+    });
+    
+    // 更新ボタンのイベントリスナー
+    if (updateBreakBtn) {
+        updateBreakBtn.addEventListener('click', function() {
+            const customMessage = customMessageInput ? customMessageInput.value.trim() : '';
+            if (!customMessage) {
+                alert('メッセージを入力してください。');
+                return;
+            }
+            handleUpdateBreakMode(true, customMessage);
+        });
+    }
+    
+    // キャンセルボタンのイベントリスナー
+    if (cancelBreakBtn) {
+        cancelBreakBtn.addEventListener('click', closeBreakMessageModal);
+    }
+    
+    // モーダル外クリックで閉じる
+    const modal = document.getElementById('break-message-modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeBreakMessageModal();
+            }
+        });
+    }
+    
+    // 入力フォーカス
+    if (customMessageInput) {
+        customMessageInput.focus();
+    }
+}
+
+// 休憩メッセージモーダルを閉じる - 新規追加
+function closeBreakMessageModal() {
+    const modal = document.getElementById('break-message-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 休憩モード更新処理 - 新規追加
+async function handleUpdateBreakMode(turn, custom = '') {
+    try {
+        const response = await fetch(`${API_BASE_URL}/break-mode`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ turn, custom })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            breakMode = { turn, custom };
+            updateSignageDisplay();
+            closeBreakMessageModal();
+            
+            if (turn) {
+                alert(`休憩モードを開始しました。\n表示メッセージ：${custom}`);
+            } else {
+                alert('営業を再開しました。');
+            }
+        } else {
+            throw new Error(data.error || '休憩モードの更新に失敗しました');
+        }
+        
+    } catch (error) {
+        console.error('Error updating break mode:', error);
+        alert('休憩モードの更新に失敗しました。\nエラー: ' + error.message);
+    }
+}
+
+// 営業再開処理 - 新規追加
+function handleResumeBusiness() {
+    if (confirm('営業を再開しますか？')) {
+        handleUpdateBreakMode(false, '');
+    }
 }
 
 // 人数データ読み込み
@@ -195,6 +426,29 @@ async function loadPopulation() {
         }
     } catch (error) {
         console.error('Error loading population:', error);
+    }
+}
+
+// 人数更新
+async function updatePopulation(change) {
+    const currentPopulationSpan = document.getElementById('current-population');
+    if (!currentPopulationSpan) return;
+    
+    const currentCount = parseInt(currentPopulationSpan.textContent);
+    const newCount = Math.max(0, currentCount + change);
+
+    try {
+        const response = await fetch(`${API_BASE_URL}/population`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ now: newCount })
+        });
+
+        if (response.ok) {
+            currentPopulationSpan.textContent = newCount;
+        }
+    } catch (error) {
+        console.error('Error updating population:', error);
     }
 }
 
