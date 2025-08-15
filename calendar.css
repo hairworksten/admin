@@ -30,10 +30,42 @@
     gap: 10px;
 }
 
+.calendar-nav-section {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.calendar-action-section {
+    display: flex;
+    gap: 10px;
+}
+
 .month-year {
     font-size: 1.5em;
     font-weight: bold;
     color: #ff6b35;
+}
+
+.add-reservation-btn {
+    background-color: #28a745;
+    color: #ffffff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.add-reservation-btn:hover {
+    background-color: #218838;
+    transform: translateY(-1px);
 }
 
 .calendar-container {
@@ -361,4 +393,140 @@
     align-self: flex-start;
     margin-right: 10px;
     width: auto;
+}
+
+/* 新しい予約追加モーダル用のスタイル */
+.add-reservation-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.add-reservation-form input,
+.add-reservation-form select,
+.add-reservation-form textarea {
+    padding: 12px;
+    border: 2px solid #555;
+    border-radius: 8px;
+    background-color: #4a4a4a;
+    color: #ffffff;
+    font-size: 16px;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.add-reservation-form input:focus,
+.add-reservation-form select:focus,
+.add-reservation-form textarea:focus {
+    outline: none;
+    border-color: #28a745;
+    background-color: #525252;
+}
+
+.add-reservation-form select option {
+    background-color: #4a4a4a;
+    color: #ffffff;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    color: #ffffff;
+}
+
+.time-slots-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.time-slot-btn {
+    background-color: #4a4a4a;
+    color: #ffffff;
+    border: 2px solid #555;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    text-align: center;
+}
+
+.time-slot-btn:hover {
+    background-color: #525252;
+    border-color: #28a745;
+}
+
+.time-slot-btn.selected {
+    background-color: #28a745;
+    border-color: #28a745;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.time-slot-btn.disabled {
+    background-color: #333;
+    color: #666;
+    cursor: not-allowed;
+    border-color: #333;
+}
+
+.time-slot-btn.disabled:hover {
+    background-color: #333;
+    border-color: #333;
+}
+
+.reservation-notes {
+    background-color: rgba(40, 167, 69, 0.1);
+    border: 1px solid #28a745;
+    border-radius: 6px;
+    padding: 12px;
+    margin-top: 15px;
+}
+
+.reservation-notes h4 {
+    color: #28a745;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.reservation-notes ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.reservation-notes li {
+    color: #ffffff;
+    font-size: 13px;
+    margin-bottom: 5px;
+    padding-left: 15px;
+    position: relative;
+}
+
+.reservation-notes li:before {
+    content: "•";
+    color: #28a745;
+    position: absolute;
+    left: 0;
+}
+
+.add-reservation-buttons {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.add-reservation-buttons .btn {
+    flex: 1;
+    min-width: 120px;
 }
