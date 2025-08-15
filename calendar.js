@@ -205,11 +205,11 @@ function showReservationDetail(reservation) {
     if (detailMenu) detailMenu.textContent = reservation.Menu || '';
     if (detailEmail) detailEmail.textContent = email;
     
-    // 同行者の場合はメールボタンを無効化
+    // 同行者や管理者追加の場合はメールボタンを無効化
     if (detailMailBtn) {
-        if (email === '同行者') {
+        if (email === '同行者' || email === '管理者追加') {
             detailMailBtn.disabled = true;
-            detailMailBtn.textContent = 'メール送信（同行者）';
+            detailMailBtn.textContent = email === '同行者' ? 'メール送信（同行者）' : 'メール送信（管理者追加）';
             detailMailBtn.style.opacity = '0.5';
             detailMailBtn.style.cursor = 'not-allowed';
         } else {
@@ -301,6 +301,11 @@ function handleDetailMail() {
     
     if (email === '同行者') {
         alert('この方は同行者のため、メールを送信できません。');
+        return;
+    }
+    
+    if (email === '管理者追加') {
+        alert('この予約は管理者が追加したもので、メールアドレスが設定されていません。');
         return;
     }
     
