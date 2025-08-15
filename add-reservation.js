@@ -245,12 +245,13 @@ async function handleAddReservation() {
     const menuName = addReservationMenuSelect ? addReservationMenuSelect.value : '';
     
     // バリデーション
-    if (!date || !name || !phone || !menuName || !selectedTimeSlot) {
-        alert('必須項目をすべて入力してください。\n（メールアドレスは任意です）');
+    if (!date || !name || !menuName || !selectedTimeSlot) {
+        alert('必須項目をすべて入力してください。\n（電話番号・メールアドレスは任意です）');
         return;
     }
     
-    if (!validatePhoneNumber(phone)) {
+    // 電話番号が入力されている場合のみバリデーション
+    if (phone && !validatePhoneNumber(phone)) {
         alert('正しい電話番号を入力してください。\n（例：090-1234-5678 または 09012345678）');
         return;
     }
@@ -285,7 +286,7 @@ async function handleAddReservation() {
             reservationNumber: reservationNumber,
             Menu: menuName,
             "Name-f": name,
-            "Name-s": phone,
+            "Name-s": phone || '管理者追加（電話番号なし）', // 電話番号が空の場合のデフォルト値
             Time: selectedTimeSlot,
             WorkTime: selectedMenu.worktime,
             date: date,
