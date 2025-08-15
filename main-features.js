@@ -2,11 +2,6 @@
 const tabBtns = document.querySelectorAll('.tab-btn');
 const tabContents = document.querySelectorAll('.tab-content');
 
-// 人数関連
-const currentPopulationSpan = document.getElementById('current-population');
-const populationMinusBtn = document.getElementById('population-minus');
-const populationPlusBtn = document.getElementById('population-plus');
-
 // 予約表示エリア
 const todayReservationsDiv = document.getElementById('today-reservations');
 const reservationHistoryDiv = document.getElementById('reservation-history');
@@ -36,10 +31,6 @@ function initializeMainFeatures() {
             switchTab(tabName);
         });
     });
-
-    // 人数変更
-    if (populationMinusBtn) populationMinusBtn.addEventListener('click', () => updatePopulation(-1));
-    if (populationPlusBtn) populationPlusBtn.addEventListener('click', () => updatePopulation(1));
 
     // 検索関連
     if (searchBtn) searchBtn.addEventListener('click', handleSearch);
@@ -98,44 +89,38 @@ function switchTab(tabName) {
     }
 }
 
-// 人数更新
-async function updatePopulation(change) {
-    const currentCount = parseInt(currentPopulationSpan.textContent);
-    const newCount = Math.max(0, currentCount + change);
-
-    try {
-        const response = await fetch(`${API_BASE_URL}/population`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ now: newCount })
+// 予約表示（休憩モード対応版）
+function displayReservations() {
+    // 休憩モード時は今日の予約表示を修正
+    if (breakMode.turn) {
+        if (todayReservationsDiv) {
+            todayReservationsDiv.innerHTML = `
+                <div style="text-align: center; padding: 20px; background-color: rgba(220, 53, 69, 0.2); border: 2px solid #dc3545; border-radius: 10px; margin: 20px 0;">
+                    <h3 style="color: #dc3545; margin-bottom: 10px;">現在休憩中です</h3>
+                    <p style="color: #ffffff; font-size: 1.1em;">${breakMode.custom}</p>
+                </div>
+            `;
+        }
+    } else {
+        // 通常営業時の予約表示
+        const today = new Date().toISOString().split('T')[0];
+        
+        const todayReservations = reservations.filter(r => 
+            r.date >= today && r.states === 0
+        ).sort((a, b) => {
+            if (a.date === b.date) {
+                return a.Time.localeCompare(b.Time);
+            }
+            return a.date.localeCompare(b.date);
         });
 
-        if (response.ok) {
-            currentPopulationSpan.textContent = newCount;
+        if (todayReservationsDiv) {
+            todayReservationsDiv.innerHTML = renderReservationsList(todayReservations, 'today');
         }
-    } catch (error) {
-        console.error('Error updating population:', error);
     }
-}
 
-// 予約表示
-function displayReservations() {
-    const today = new Date().toISOString().split('T')[0];
-    
-    const todayReservations = reservations.filter(r => 
-        r.date >= today && r.states === 0
-    ).sort((a, b) => {
-        if (a.date === b.date) {
-            return a.Time.localeCompare(b.Time);
-        }
-        return a.date.localeCompare(b.date);
-    });
-
+    // 履歴は常に表示
     const historyReservations = getFilteredReservations();
-
-    if (todayReservationsDiv) {
-        todayReservationsDiv.innerHTML = renderReservationsList(todayReservations, 'today');
-    }
     if (reservationHistoryDiv) {
         reservationHistoryDiv.innerHTML = renderReservationsList(historyReservations, 'history');
     }
@@ -206,7 +191,8 @@ function renderReservationsList(reservationsList, type) {
         const email = reservation.mail || '';
         
         let actionsHTML = '';
-        if (type === 'today') {
+        if (type === 'today' && !breakMode.turn) {
+            // 通常営業時のみアクションボタンを表示
             // 同行者の場合はメール送信ボタンを無効化
             const mailButtonDisabled = email === '同行者' ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '';
             const mailButtonText = email === '同行者' ? 'メール送信（同行者）' : 'メール送信';
@@ -216,7 +202,7 @@ function renderReservationsList(reservationsList, type) {
                 <button class="btn btn-danger btn-small" onclick="handleCancel('${reservation.id}')">キャンセル</button>
                 <button class="btn btn-secondary btn-small" onclick="openMailModal('${email}', '${customerName}')" ${mailButtonDisabled}>${mailButtonText}</button>
             `;
-        } else {
+        } else if (type === 'history') {
             // 履歴でも同行者の場合はメール送信ボタンを無効化
             const mailButtonDisabled = email === '同行者' ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '';
             const mailButtonText = email === '同行者' ? 'メール送信（同行者）' : 'メール送信';
@@ -268,8 +254,13 @@ function getStatusClass(status) {
     }
 }
 
-// 来店処理
+// 来店処理（休憩モード時は無効化）
 async function handleVisit(reservationId) {
+    if (breakMode.turn) {
+        alert('休憩中のため、来店処理はできません。');
+        return;
+    }
+    
     try {
         const response = await fetch(`${API_BASE_URL}/reservations/${reservationId}/status`, {
             method: 'POST',
@@ -285,8 +276,13 @@ async function handleVisit(reservationId) {
     }
 }
 
-// キャンセル処理
+// キャンセル処理（休憩モード時は無効化）
 function handleCancel(reservationId) {
+    if (breakMode.turn) {
+        alert('休憩中のため、キャンセル処理はできません。');
+        return;
+    }
+    
     if (typeof showConfirm === 'function') {
         showConfirm('予約キャンセル', '本当にキャンセルしますか？', async () => {
             try {
