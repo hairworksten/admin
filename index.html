@@ -42,6 +42,7 @@
             <div id="home-tab" class="tab-content active">
                 <div class="section">
                     <h2>サイネージの更新</h2>
+                    <!-- この部分は JavaScript の updateSignageDisplay() で動的に更新されます -->
                     <div class="population-control">
                         <div class="population-display">
                             <span>現在の待ち人数: </span>
@@ -51,6 +52,9 @@
                             <button id="population-minus" class="btn btn-primary">-</button>
                             <button id="population-plus" class="btn btn-primary">+</button>
                         </div>
+                    </div>
+                    <div class="break-control" style="margin-top: 20px;">
+                        <button id="start-break-btn" class="btn btn-secondary">休憩中</button>
                     </div>
                 </div>
 
