@@ -381,7 +381,7 @@ async function handleAddReservation() {
                         reservationNumber: generateReservationNumber(),
                         Menu: menuName,
                         "Name-f": name,
-                        "Name-s": phone,
+                        "Name-s": phone || '管理者追加（電話番号なし）',
                         Time: selectedTimeSlot,
                         WorkTime: selectedMenu.worktime,
                         date: date,
