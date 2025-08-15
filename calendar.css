@@ -20,6 +20,17 @@
     min-width: 50px;
 }
 
+/* 休憩開始ボタンのインライン配置（デスクトップ用） */
+.break-control-inline {
+    display: flex;
+    align-items: center;
+    margin-left: 15px;
+}
+
+.break-control-inline .btn {
+    white-space: nowrap;
+}
+
 /* カレンダー関連 */
 .calendar-controls {
     display: flex;
