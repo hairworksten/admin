@@ -35,13 +35,13 @@
         grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     }
     
-    /* デスクトップでは従来通りの横並びレイアウト */
+    /* デスクトップでは休憩開始ボタンを+/-ボタンの右側に配置 */
     .population-control {
         display: flex;
         align-items: center;
         gap: 15px;
         font-size: 1.2em;
-        flex-wrap: wrap;
+        flex-wrap: nowrap;
     }
     
     .population-display {
@@ -53,6 +53,12 @@
     .population-buttons {
         display: flex;
         gap: 15px;
+    }
+    
+    .break-control-inline {
+        display: flex;
+        align-items: center;
+        margin-left: 15px;
     }
     
     #current-population {
@@ -131,7 +137,7 @@
         justify-content: center;
     }
     
-    /* 人数コントロールのレスポンシブ対応 - 修正版 */
+    /* モバイル時は縦並びレイアウト - 修正版 */
     .population-control {
         display: flex;
         flex-direction: column;
@@ -146,7 +152,7 @@
         align-items: center;
         gap: 10px;
         justify-content: center;
-        flex-wrap: nowrap; /* 改行させない */
+        flex-wrap: nowrap;
     }
     
     .population-buttons {
@@ -154,6 +160,15 @@
         gap: 15px;
         justify-content: center;
         align-items: center;
+    }
+    
+    /* モバイルでは休憩開始ボタンを下段に配置 */
+    .break-control-inline {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0;
+        width: 100%;
     }
     
     #current-population {
@@ -170,6 +185,13 @@
         min-height: 50px;
         font-size: 18px;
         font-weight: bold;
+    }
+    
+    /* 休憩開始ボタンのモバイル専用スタイル */
+    .break-control-inline .btn {
+        min-width: 120px;
+        padding: 12px 20px;
+        font-size: 16px;
     }
     
     /* カレンダーモバイル対応（見切れ防止） */
