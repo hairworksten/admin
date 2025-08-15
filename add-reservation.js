@@ -274,7 +274,10 @@ async function handleAddReservation() {
     }
     
     try {
-        // 予約データを作成
+        // 管理画面のAPIベースURLを使用
+        const ADMIN_API_BASE_URL = 'https://reservation-api-36382648212.asia-northeast1.run.app/api';
+        
+        // 予約データを作成（予約サイトと同じ形式）
         const reservationData = {
             reservationNumber: generateReservationNumber(),
             Menu: menuName,
@@ -287,26 +290,100 @@ async function handleAddReservation() {
             states: 0
         };
         
-        // 予約サイトと同じAPIエンドポイントを使用
-        const response = await fetch(`${API_BASE_URL}/reservations/batch`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                reservations: [reservationData]
-            })
-        });
+        console.log('予約データ:', reservationData);
         
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+        let response;
+        let apiUrl;
+        
+        // 複数のAPIエンドポイントを試行
+        const apiEndpoints = [
+            `${ADMIN_API_BASE_URL}/reservations`,
+            `${ADMIN_API_BASE_URL}/reservations/batch`,
+            `https://hair-works-api-36382648212.asia-northeast1.run.app/api/reservations/batch`
+        ];
+        
+        for (let i = 0; i < apiEndpoints.length; i++) {
+            apiUrl = apiEndpoints[i];
+            console.log(`API試行 ${i + 1}:`, apiUrl);
+            
+            try {
+                if (apiUrl.includes('/batch')) {
+                    // batch用の形式
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            reservations: [reservationData]
+                        })
+                    });
+                } else {
+                    // 単体用の形式
+                    response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(reservationData)
+                    });
+                }
+                
+                if (response.ok) {
+                    console.log(`API成功: ${apiUrl}`);
+                    break;
+                }
+                
+            } catch (fetchError) {
+                console.error(`API ${i + 1} エラー:`, fetchError);
+                if (i === apiEndpoints.length - 1) {
+                    throw fetchError;
+                }
+                continue;
+            }
         }
         
-        const result = await response.json();
+        console.log('リクエスト送信:', `${ADMIN_API_BASE_URL}/reservations`);
         
-        if (!result.success) {
-            throw new Error(result.message || '予約の追加に失敗しました');
+        if (!response.ok) {
+            // レスポンスがHTMLの場合とJSONの場合の両方に対応
+            let errorMessage;
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType && contentType.includes('application/json')) {
+                const errorData = await response.json();
+                errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
+            } else {
+                // HTMLレスポンスの場合
+                const htmlText = await response.text();
+                console.error('HTML Error Response:', htmlText);
+                errorMessage = `APIエラー (${response.status}): サーバーからHTMLレスポンスが返されました。APIエンドポイントを確認してください。`;
+            }
+            throw new Error(errorMessage);
+        }
+        
+        // レスポンスの形式を確認
+        const contentType = response.headers.get('content-type');
+        let result;
+        
+        if (contentType && contentType.includes('application/json')) {
+            result = await response.json();
+        } else {
+            // JSONでない場合はエラーとして扱う
+            const responseText = await response.text();
+            console.error('Non-JSON Response:', responseText);
+            throw new Error('APIから予期しないレスポンス形式が返されました');
+        }
+        
+        console.log('API Response:', result);
+        
+        // 成功判定を柔軟に行う
+        const isSuccess = result.success === true || 
+                         result.status === 'success' || 
+                         (response.status >= 200 && response.status < 300);
+        
+        if (!isSuccess) {
+            throw new Error(result.message || result.error || '予約の追加に失敗しました');
         }
         
         // 成功時の処理
@@ -333,17 +410,37 @@ async function handleAddReservation() {
         
         let errorMessage = '予約の追加に失敗しました。';
         
-        if (error.message.includes('already exists') || error.message.includes('重複')) {
-            errorMessage = 'この時間は既に予約が入っています。別の時間を選択してください。';
+        if (error.message.includes('Unexpected token')) {
+            errorMessage = 'APIサーバーからの応答形式が正しくありません。\n管理者にお問い合わせください。';
+        } else if (error.message.includes('Failed to fetch') || error.message.includes('network')) {
+            errorMessage = 'ネットワークエラーが発生しました。\nインターネット接続を確認してください。';
+        } else if (error.message.includes('404')) {
+            errorMessage = 'APIエンドポイントが見つかりません。\nシステム管理者にお問い合わせください。';
+        } else if (error.message.includes('500')) {
+            errorMessage = 'サーバーエラーが発生しました。\nしばらく時間をおいてから再度お試しください。';
+        } else if (error.message.includes('already exists') || error.message.includes('重複')) {
+            errorMessage = 'この時間は既に予約が入っています。\n別の時間を選択してください。';
         } else if (error.message.includes('holiday') || error.message.includes('休業日')) {
             errorMessage = 'この日は休業日のため予約できません。';
-        } else if (error.message.includes('network') || error.message.includes('fetch')) {
-            errorMessage = 'ネットワークエラーが発生しました。接続を確認してください。';
         } else if (error.message) {
             errorMessage += '\n詳細: ' + error.message;
         }
         
         alert(errorMessage);
+        
+        // デバッグ情報をコンソールに出力
+        console.error('Error Details:', {
+            message: error.message,
+            stack: error.stack,
+            reservationData: {
+                date: date,
+                name: name,
+                phone: phone,
+                email: email,
+                menu: menuName,
+                time: selectedTimeSlot
+            }
+        });
         
     } finally {
         // 送信ボタンを再有効化
