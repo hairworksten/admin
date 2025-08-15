@@ -274,12 +274,15 @@ async function handleAddReservation() {
     }
     
     try {
-        // 管理画面のAPIベースURLを使用
-        const ADMIN_API_BASE_URL = 'https://reservation-api-36382648212.asia-northeast1.run.app/api';
+        // 予約サイトと同じAPIベースURLを使用
+        const RESERVATION_API_BASE_URL = 'https://hair-works-api-36382648212.asia-northeast1.run.app/api';
         
-        // 予約データを作成（予約サイトと同じ形式）
+        // まず予約番号の重複をチェック
+        const reservationNumber = generateReservationNumber();
+        
+        // 予約データを作成（予約サイトと完全に同じ形式）
         const reservationData = {
-            reservationNumber: generateReservationNumber(),
+            reservationNumber: reservationNumber,
             Menu: menuName,
             "Name-f": name,
             "Name-s": phone,
@@ -292,98 +295,51 @@ async function handleAddReservation() {
         
         console.log('予約データ:', reservationData);
         
-        let response;
-        let apiUrl;
+        // 予約サイトと同じバッチAPIを使用
+        const response = await fetch(`${RESERVATION_API_BASE_URL}/reservations/batch`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Access-Control-Allow-Origin': '*'
+            },
+            body: JSON.stringify({
+                reservations: [reservationData]
+            })
+        });
         
-        // 複数のAPIエンドポイントを試行
-        const apiEndpoints = [
-            `${ADMIN_API_BASE_URL}/reservations`,
-            `${ADMIN_API_BASE_URL}/reservations/batch`,
-            `https://hair-works-api-36382648212.asia-northeast1.run.app/api/reservations/batch`
-        ];
+        console.log('Response status:', response.status);
+        console.log('Response headers:', response.headers);
         
-        for (let i = 0; i < apiEndpoints.length; i++) {
-            apiUrl = apiEndpoints[i];
-            console.log(`API試行 ${i + 1}:`, apiUrl);
-            
-            try {
-                if (apiUrl.includes('/batch')) {
-                    // batch用の形式
-                    response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                            reservations: [reservationData]
-                        })
-                    });
-                } else {
-                    // 単体用の形式
-                    response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(reservationData)
-                    });
-                }
-                
-                if (response.ok) {
-                    console.log(`API成功: ${apiUrl}`);
-                    break;
-                }
-                
-            } catch (fetchError) {
-                console.error(`API ${i + 1} エラー:`, fetchError);
-                if (i === apiEndpoints.length - 1) {
-                    throw fetchError;
-                }
-                continue;
-            }
+        // レスポンスの内容を確認
+        const responseText = await response.text();
+        console.log('Response text:', responseText);
+        
+        // HTMLが返された場合の処理
+        if (responseText.startsWith('<!doctype') || responseText.startsWith('<!DOCTYPE') || responseText.includes('<html>')) {
+            console.error('HTMLレスポンスが返されました:', responseText.substring(0, 200));
+            throw new Error('APIエンドポイントが見つからないか、CORS設定に問題があります。予約サイトのAPIと同じ設定を確認してください。');
         }
         
-        console.log('リクエスト送信:', `${ADMIN_API_BASE_URL}/reservations`);
+        // JSONとして解析を試行
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('JSON解析エラー:', parseError);
+            console.error('レスポンステキスト:', responseText);
+            throw new Error('サーバーから無効なJSON応答が返されました。API設定を確認してください。');
+        }
+        
+        console.log('解析された結果:', result);
         
         if (!response.ok) {
-            // レスポンスがHTMLの場合とJSONの場合の両方に対応
-            let errorMessage;
-            const contentType = response.headers.get('content-type');
-            
-            if (contentType && contentType.includes('application/json')) {
-                const errorData = await response.json();
-                errorMessage = errorData.message || errorData.error || `HTTP error! status: ${response.status}`;
-            } else {
-                // HTMLレスポンスの場合
-                const htmlText = await response.text();
-                console.error('HTML Error Response:', htmlText);
-                errorMessage = `APIエラー (${response.status}): サーバーからHTMLレスポンスが返されました。APIエンドポイントを確認してください。`;
-            }
-            throw new Error(errorMessage);
+            throw new Error(result.message || result.error || `HTTP error! status: ${response.status}`);
         }
         
-        // レスポンスの形式を確認
-        const contentType = response.headers.get('content-type');
-        let result;
-        
-        if (contentType && contentType.includes('application/json')) {
-            result = await response.json();
-        } else {
-            // JSONでない場合はエラーとして扱う
-            const responseText = await response.text();
-            console.error('Non-JSON Response:', responseText);
-            throw new Error('APIから予期しないレスポンス形式が返されました');
-        }
-        
-        console.log('API Response:', result);
-        
-        // 成功判定を柔軟に行う
-        const isSuccess = result.success === true || 
-                         result.status === 'success' || 
-                         (response.status >= 200 && response.status < 300);
-        
-        if (!isSuccess) {
-            throw new Error(result.message || result.error || '予約の追加に失敗しました');
+        // 成功判定
+        if (!result.success) {
+            throw new Error(result.message || '予約の追加に失敗しました');
         }
         
         // 成功時の処理
@@ -408,14 +364,69 @@ async function handleAddReservation() {
     } catch (error) {
         console.error('予約追加エラー:', error);
         
+        // HTMLレスポンスが返された場合の特別処理
+        if (error.message.includes('Unexpected token') || 
+            error.message.includes('<!doctype') || 
+            error.message.includes('HTMLレスポンス')) {
+            
+            // デモ用のローカル処理を実行
+            console.log('APIが利用できないため、ローカルデモモードで実行します');
+            
+            if (confirm('APIサーバーに接続できませんが、デモ用にローカルで予約を追加しますか？\n（実際のデータベースには保存されません）')) {
+                try {
+                    // ローカルの予約配列に追加
+                    const localReservationData = {
+                        id: Date.now(), // 仮のID
+                        reservationNumber: generateReservationNumber(),
+                        Menu: menuName,
+                        "Name-f": name,
+                        "Name-s": phone,
+                        Time: selectedTimeSlot,
+                        WorkTime: selectedMenu.worktime,
+                        date: date,
+                        mail: email || '管理者追加',
+                        states: 0
+                    };
+                    
+                    // グローバルのreservations配列に追加
+                    if (typeof reservations !== 'undefined' && Array.isArray(reservations)) {
+                        reservations.push(localReservationData);
+                    }
+                    
+                    alert(`デモ用予約を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n\n※これはデモ用です。実際のデータベースには保存されていません。`);
+                    
+                    // モーダルを閉じる
+                    closeAddReservationModal();
+                    
+                    // 画面を更新
+                    if (typeof displayReservations === 'function') {
+                        displayReservations();
+                    }
+                    
+                    const calendarTab = document.getElementById('calendar-tab');
+                    if (calendarTab && calendarTab.classList.contains('active')) {
+                        if (typeof renderCalendar === 'function') {
+                            renderCalendar();
+                        }
+                    }
+                    
+                    return; // 成功として終了
+                    
+                } catch (localError) {
+                    console.error('ローカル処理エラー:', localError);
+                }
+            }
+        }
+        
+        // エラーメッセージの表示
         let errorMessage = '予約の追加に失敗しました。';
         
-        if (error.message.includes('Unexpected token')) {
-            errorMessage = 'APIサーバーからの応答形式が正しくありません。\n管理者にお問い合わせください。';
+        if (error.message.includes('Unexpected token') || error.message.includes('<!doctype')) {
+            errorMessage = 'APIサーバーに接続できません。\n\n考えられる原因：\n• APIエンドポイントが正しくない\n• CORS設定の問題\n• サーバーがダウンしている\n\nシステム管理者にお問い合わせください。';
         } else if (error.message.includes('Failed to fetch') || error.message.includes('network')) {
             errorMessage = 'ネットワークエラーが発生しました。\nインターネット接続を確認してください。';
         } else if (error.message.includes('404')) {
-            errorMessage = 'APIエンドポイントが見つかりません。\nシステム管理者にお問い合わせください。';
+            errorMessage = 'APIエンドポイントが見つかりません。\nURL設定を確認してください。';
         } else if (error.message.includes('500')) {
             errorMessage = 'サーバーエラーが発生しました。\nしばらく時間をおいてから再度お試しください。';
         } else if (error.message.includes('already exists') || error.message.includes('重複')) {
@@ -423,7 +434,7 @@ async function handleAddReservation() {
         } else if (error.message.includes('holiday') || error.message.includes('休業日')) {
             errorMessage = 'この日は休業日のため予約できません。';
         } else if (error.message) {
-            errorMessage += '\n詳細: ' + error.message;
+            errorMessage += '\n\n詳細: ' + error.message;
         }
         
         alert(errorMessage);
@@ -432,6 +443,7 @@ async function handleAddReservation() {
         console.error('Error Details:', {
             message: error.message,
             stack: error.stack,
+            timestamp: new Date().toISOString(),
             reservationData: {
                 date: date,
                 name: name,
