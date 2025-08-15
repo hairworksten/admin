@@ -211,7 +211,7 @@ async function loadBreakMode() {
     }
 }
 
-// サイネージ表示更新 - 新規追加
+// サイネージ表示更新 - 修正版
 function updateSignageDisplay() {
     const signageSection = document.querySelector('.section h2');
     if (!signageSection || signageSection.textContent !== 'サイネージの更新') return;
@@ -242,7 +242,7 @@ function updateSignageDisplay() {
         }
         
     } else {
-        // 通常営業時の表示
+        // 通常営業時の表示 - レイアウト修正
         section.innerHTML = `
             <h2>サイネージの更新</h2>
             <div class="population-control">
@@ -254,9 +254,9 @@ function updateSignageDisplay() {
                     <button id="population-minus" class="btn btn-primary">-</button>
                     <button id="population-plus" class="btn btn-primary">+</button>
                 </div>
-            </div>
-            <div class="break-control" style="margin-top: 20px;">
-                <button id="start-break-btn" class="btn btn-secondary">休憩中</button>
+                <div class="break-control-inline">
+                    <button id="start-break-btn" class="btn btn-secondary">休憩開始</button>
+                </div>
             </div>
         `;
         
