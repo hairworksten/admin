@@ -1,4 +1,4 @@
-// 予約追加機能のJavaScript（カスタム時間入力対応版）
+// 予約追加機能のJavaScript（統一APIエンドポイント対応版）
 
 // DOM要素
 const addReservationModal = document.getElementById('add-reservation-modal');
@@ -166,7 +166,7 @@ async function displayAvailableTimeSlots(date) {
     addReservationTimeslotsDiv.innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">時間を確認しています...</div>';
     
     try {
-        // 既存の予約を取得
+        // 既存の予約を取得（統一されたAPIエンドポイントを使用）
         const response = await fetch(`${API_BASE_URL}/reservations`);
         const allReservations = await response.json();
         
@@ -442,7 +442,7 @@ function generateReservationNumber() {
     return Math.floor(Math.random() * 90000000) + 10000000;
 }
 
-// 予約追加処理（カスタム時間対応版）
+// 予約追加処理（統一APIエンドポイント対応版）
 async function handleAddReservation() {
     // フォームの値を取得
     const date = addReservationDateInput ? addReservationDateInput.value : '';
@@ -491,13 +491,10 @@ async function handleAddReservation() {
     }
     
     try {
-        // 予約サイトと同じAPIベースURLを使用
-        const RESERVATION_API_BASE_URL = 'https://hair-works-api-36382648212.asia-northeast1.run.app/api';
-        
         // まず予約番号の重複をチェック
         const reservationNumber = generateReservationNumber();
         
-        // 予約データを作成（予約サイトと完全に同じ形式）
+        // 予約データを作成（統一されたAPIフォーマット）
         const reservationData = {
             reservationNumber: reservationNumber,
             Menu: menuName,
@@ -512,18 +509,16 @@ async function handleAddReservation() {
         
         console.log('予約データ:', reservationData);
         console.log('カスタム時間フラグ:', isCustomTime);
+        console.log('使用するAPIエンドポイント:', API_BASE_URL);
         
-        // 予約サイトと同じバッチAPIを使用
-        const response = await fetch(`${RESERVATION_API_BASE_URL}/reservations/batch`, {
+        // 統一されたAPIエンドポイントを使用
+        const response = await fetch(`${API_BASE_URL}/reservations`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'Access-Control-Allow-Origin': '*'
+                'Accept': 'application/json'
             },
-            body: JSON.stringify({
-                reservations: [reservationData]
-            })
+            body: JSON.stringify(reservationData)
         });
         
         console.log('Response status:', response.status);
@@ -552,7 +547,7 @@ async function handleAddReservation() {
         }
         
         // 成功判定
-        if (!result.success) {
+        if (!result.success && result.success !== undefined) {
             throw new Error(result.message || '予約の追加に失敗しました');
         }
         
@@ -675,6 +670,7 @@ async function handleAddReservation() {
             timestamp: new Date().toISOString(),
             isCustomTime: isCustomTime,
             selectedTime: selectedTimeSlot,
+            apiEndpoint: API_BASE_URL,
             reservationData: {
                 date: date,
                 name: name,
