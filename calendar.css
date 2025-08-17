@@ -548,17 +548,17 @@
 
 /* カスタム時間ボタンのスタイル */
 .custom-time-btn {
-    background-color: #28a745 !important;
-    border-color: #28a745 !important;
+    background-color: #4a4a4a !important;
+    border-color: #555 !important;
     color: #ffffff !important;
-    font-weight: bold;
+    font-weight: normal;
     position: relative;
     transition: all 0.3s ease;
 }
 
 .custom-time-btn:hover {
-    background-color: #218838 !important;
-    border-color: #218838 !important;
+    background-color: #525252 !important;
+    border-color: #28a745 !important;
     transform: translateY(-2px);
     box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
 }
