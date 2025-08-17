@@ -389,19 +389,9 @@ function selectTimeSlot(time, buttonElement, isCustom = false) {
             customBtn.style.borderColor = '#ff6b35';
         }
         
-        // 確認メッセージを表示
+        // 確認メッセージを表示（ボタンの下に配置）
         const confirmationDiv = document.createElement('div');
         confirmationDiv.className = 'custom-time-confirmation';
-        confirmationDiv.style.cssText = `
-            background-color: rgba(40, 167, 69, 0.2);
-            border: 2px solid #28a745;
-            border-radius: 8px;
-            padding: 10px;
-            margin-top: 10px;
-            text-align: center;
-            color: #28a745;
-            font-weight: bold;
-        `;
         confirmationDiv.innerHTML = `✅ カスタム時間 ${time} が選択されました`;
         
         // 既存の確認メッセージがある場合は削除
