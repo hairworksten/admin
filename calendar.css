@@ -593,6 +593,8 @@
     color: #28a745 !important;
     font-weight: bold;
     animation: fadeInScale 0.5s ease-out;
+    width: 100%;
+    grid-column: 1 / -1; /* グリッド全体の幅を使用 */
 }
 
 @keyframes fadeInScale {
