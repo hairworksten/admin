@@ -203,7 +203,7 @@ async function displayAvailableTimeSlots(date) {
         // カスタム時間ボタンを追加
         const customTimeBtn = document.createElement('button');
         customTimeBtn.className = 'time-slot-btn custom-time-btn';
-        customTimeBtn.textContent = '⏰ カスタム';
+        customTimeBtn.textContent = 'カスタム';
         customTimeBtn.type = 'button';
         customTimeBtn.style.backgroundColor = '#28a745';
         customTimeBtn.style.borderColor = '#28a745';
@@ -384,7 +384,7 @@ function selectTimeSlot(time, buttonElement, isCustom = false) {
         const customBtn = addReservationTimeslotsDiv.querySelector('.custom-time-btn');
         if (customBtn) {
             customBtn.classList.add('selected');
-            customBtn.textContent = `⏰ カスタム (${time})`;
+            customBtn.textContent = `カスタム (${time})`;
             customBtn.style.backgroundColor = '#ff6b35';
             customBtn.style.borderColor = '#ff6b35';
         }
@@ -421,7 +421,7 @@ function selectTimeSlot(time, buttonElement, isCustom = false) {
         // カスタムボタンの表示をリセット
         const customBtn = addReservationTimeslotsDiv.querySelector('.custom-time-btn');
         if (customBtn) {
-            customBtn.textContent = '⏰ カスタム';
+            customBtn.textContent = 'カスタム';
             customBtn.style.backgroundColor = '#28a745';
             customBtn.style.borderColor = '#28a745';
         }
