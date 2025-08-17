@@ -175,15 +175,42 @@ function showLoginScreen() {
     hideError();
 }
 
-// 初期データ読み込み
+// 初期データ読み込み（修正版 - 順序を最適化）
 async function loadInitialData() {
-    await loadBreakMode(); // 休憩モード読み込みを追加
-    await loadPopulation();
-    await loadReservations();
-    await loadMailTemplates();
-    await loadHolidays();
-    await loadMenus();
-    await loadNotices(); // 重要なお知らせの読み込みを追加
+    try {
+        // 1. まず基本データを並行読み込み
+        await Promise.all([
+            loadBreakMode(),
+            loadPopulation(),
+            loadHolidays(),
+            loadMenus(), // メニューを早めに読み込み
+            loadNotices()
+        ]);
+        
+        // 2. メニューデータが読み込まれた後に予約データを読み込み
+        await loadReservations();
+        
+        // 3. 最後にメールテンプレートを読み込み
+        await loadMailTemplates();
+        
+        // 4. 全データ読み込み完了後にカレンダーが表示されている場合は再描画
+        const calendarTab = document.getElementById('calendar-tab');
+        if (calendarTab && calendarTab.classList.contains('active')) {
+            setTimeout(() => {
+                if (typeof renderCalendar === 'function') {
+                    renderCalendar();
+                }
+                if (typeof renderMenuLegend === 'function') {
+                    renderMenuLegend();
+                }
+            }, 50);
+        }
+        
+        console.log('初期データ読み込み完了');
+        
+    } catch (error) {
+        console.error('初期データ読み込みエラー:', error);
+    }
 }
 
 // 休憩モード読み込み - 新規追加
@@ -452,7 +479,7 @@ async function updatePopulation(change) {
     }
 }
 
-// 予約データ読み込み
+// 予約データ読み込み（修正版 - メニューデータ依存を考慮）
 async function loadReservations() {
     try {
         const response = await fetch(`${API_BASE_URL}/reservations`);
@@ -468,9 +495,13 @@ async function loadReservations() {
             displayReservations();
         }
         
+        // カレンダーが表示されている場合は再描画
         const calendarTab = document.getElementById('calendar-tab');
         if (calendarTab && calendarTab.classList.contains('active') && typeof renderCalendar === 'function') {
-            renderCalendar();
+            // メニューデータが読み込まれていることを確認してから描画
+            if (currentMenus && Object.keys(currentMenus).length > 0) {
+                renderCalendar();
+            }
         }
     } catch (error) {
         console.error('Error loading reservations:', error);
@@ -514,17 +545,34 @@ async function loadHolidays() {
     }
 }
 
-// メニュー読み込み
+// メニュー読み込み（修正版 - 読み込み完了後にカレンダー更新）
 async function loadMenus() {
     try {
         const response = await fetch(`${API_BASE_URL}/menus`);
         const menus = await response.json();
         currentMenus = menus;
+        
+        console.log('メニューデータ読み込み完了:', Object.keys(currentMenus));
+        
         if (typeof displayMenus === 'function') {
             displayMenus(menus);
         }
+        
+        // メニューデータが読み込まれた後、カレンダーが表示されている場合は再描画
+        const calendarTab = document.getElementById('calendar-tab');
+        if (calendarTab && calendarTab.classList.contains('active')) {
+            setTimeout(() => {
+                if (typeof renderCalendar === 'function') {
+                    renderCalendar();
+                }
+                if (typeof renderMenuLegend === 'function') {
+                    renderMenuLegend();
+                }
+            }, 50);
+        }
     } catch (error) {
         console.error('Error loading menus:', error);
+        currentMenus = {};
     }
 }
 
