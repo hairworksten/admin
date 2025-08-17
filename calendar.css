@@ -541,3 +541,359 @@
     flex: 1;
     min-width: 120px;
 }
+
+/* ========================================
+   カスタム時間入力機能用のCSSスタイル
+   ======================================== */
+
+/* カスタム時間ボタンのスタイル */
+.custom-time-btn {
+    background-color: #28a745 !important;
+    border-color: #28a745 !important;
+    color: #ffffff !important;
+    font-weight: bold;
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.custom-time-btn:hover {
+    background-color: #218838 !important;
+    border-color: #218838 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+.custom-time-btn.selected {
+    background-color: #ff6b35 !important;
+    border-color: #ff6b35 !important;
+    color: #ffffff !important;
+    animation: pulse-custom 2s infinite;
+}
+
+@keyframes pulse-custom {
+    0% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 53, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 10px rgba(255, 107, 53, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(255, 107, 53, 0);
+    }
+}
+
+/* カスタム時間確認メッセージ */
+.custom-time-confirmation {
+    background-color: rgba(40, 167, 69, 0.2) !important;
+    border: 2px solid #28a745 !important;
+    border-radius: 8px;
+    padding: 12px;
+    margin-top: 15px;
+    text-align: center;
+    color: #28a745 !important;
+    font-weight: bold;
+    animation: fadeInScale 0.5s ease-out;
+}
+
+@keyframes fadeInScale {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* カスタム時間モーダルのスタイル */
+.custom-time-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.custom-time-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.custom-time-form label {
+    font-weight: bold;
+    color: #ffffff;
+    font-size: 16px;
+}
+
+.custom-time-form input[type="time"] {
+    padding: 12px;
+    border: 2px solid #555;
+    border-radius: 8px;
+    background-color: #4a4a4a;
+    color: #ffffff;
+    font-size: 18px;
+    font-weight: bold;
+    text-align: center;
+    width: 100%;
+    max-width: 200px;
+    margin: 0 auto;
+    transition: all 0.3s ease;
+}
+
+.custom-time-form input[type="time"]:focus {
+    outline: none;
+    border-color: #28a745;
+    background-color: #525252;
+    box-shadow: 0 0 0 3px rgba(40, 167, 69, 0.2);
+}
+
+/* カスタム時間の注意事項スタイル */
+.custom-time-notes {
+    background-color: #4a4a4a;
+    border: 2px solid #ffc107;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.custom-time-notes h4 {
+    color: #ffc107;
+    margin-bottom: 10px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.custom-time-notes ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.custom-time-notes li {
+    color: #ffffff;
+    font-size: 14px;
+    margin-bottom: 8px;
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.4;
+}
+
+.custom-time-notes li:before {
+    content: "•";
+    color: #ffc107;
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+}
+
+/* 既存予約リストのスタイル */
+.existing-reservations {
+    background-color: #3a3a3a;
+    border: 2px solid #6c757d;
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.existing-reservations h4 {
+    color: #17a2b8;
+    margin-bottom: 12px;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.existing-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border-radius: 6px;
+    background-color: #2c2c2c;
+    padding: 10px;
+}
+
+.existing-item {
+    background-color: #4a4a4a;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 14px;
+    border-left: 4px solid #17a2b8;
+    transition: all 0.2s ease;
+}
+
+.existing-item:hover {
+    background-color: #525252;
+    transform: translateX(2px);
+}
+
+.existing-item:last-child {
+    margin-bottom: 0;
+}
+
+.existing-item.no-reservations {
+    color: #6c757d;
+    font-style: italic;
+    text-align: center;
+    border-left-color: #6c757d;
+}
+
+/* モーダルボタンのスタイル調整 */
+.custom-time-form .modal-buttons {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.custom-time-form .modal-buttons .btn {
+    min-width: 120px;
+    padding: 12px 20px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.custom-time-form .modal-buttons .btn-success {
+    background-color: #28a745;
+    border-color: #28a745;
+}
+
+.custom-time-form .modal-buttons .btn-success:hover {
+    background-color: #218838;
+    border-color: #218838;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(40, 167, 69, 0.3);
+}
+
+/* 時間入力フィールドのベンダープレフィックス対応 */
+.custom-time-form input[type="time"]::-webkit-datetime-edit {
+    color: #ffffff;
+}
+
+.custom-time-form input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    cursor: pointer;
+}
+
+.custom-time-form input[type="time"]::-webkit-datetime-edit-fields-wrapper {
+    padding: 0;
+}
+
+.custom-time-form input[type="time"]::-webkit-datetime-edit-text {
+    color: #ffffff;
+    padding: 2px;
+}
+
+.custom-time-form input[type="time"]::-webkit-datetime-edit-hour-field,
+.custom-time-form input[type="time"]::-webkit-datetime-edit-minute-field {
+    background-color: transparent;
+    color: #ffffff;
+    border: none;
+    padding: 2px;
+}
+
+/* フォーカス時のスタイル調整 */
+.custom-time-form input[type="time"]:focus::-webkit-datetime-edit-hour-field,
+.custom-time-form input[type="time"]:focus::-webkit-datetime-edit-minute-field {
+    background-color: rgba(40, 167, 69, 0.2);
+    border-radius: 3px;
+}
+
+/* レスポンシブ対応 - カスタム時間機能 */
+@media (max-width: 768px) {
+    .custom-time-form input[type="time"] {
+        font-size: 16px;
+        max-width: 180px;
+    }
+    
+    .custom-time-notes {
+        padding: 12px;
+    }
+    
+    .custom-time-notes li {
+        font-size: 13px;
+        padding-left: 18px;
+    }
+    
+    .existing-reservations {
+        padding: 12px;
+    }
+    
+    .existing-list {
+        max-height: 150px;
+    }
+    
+    .existing-item {
+        font-size: 13px;
+        padding: 6px 10px;
+    }
+    
+    .custom-time-form .modal-buttons {
+        flex-direction: column;
+    }
+    
+    .custom-time-form .modal-buttons .btn {
+        min-width: auto;
+        width: 100%;
+    }
+}
+
+/* 極小画面対応 */
+@media (max-width: 480px) {
+    .custom-time-form {
+        gap: 15px;
+    }
+    
+    .custom-time-form input[type="time"] {
+        font-size: 14px;
+        max-width: 160px;
+        padding: 10px;
+    }
+    
+    .custom-time-notes h4 {
+        font-size: 14px;
+    }
+    
+    .custom-time-notes li {
+        font-size: 12px;
+    }
+    
+    .existing-reservations h4 {
+        font-size: 14px;
+    }
+    
+    .existing-item {
+        font-size: 12px;
+        padding: 5px 8px;
+    }
+}
+
+/* アクセシビリティ対応 */
+@media (prefers-reduced-motion: reduce) {
+    .custom-time-btn,
+    .custom-time-confirmation,
+    .existing-item,
+    .custom-time-form .modal-buttons .btn {
+        animation: none;
+        transition: none;
+    }
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+    .custom-time-form input[type="time"] {
+        background-color: #2c2c2c;
+        border-color: #404040;
+        color: #e0e0e0;
+    }
+    
+    .existing-list {
+        background-color: #1a1a1a;
+    }
+    
+    .existing-item {
+        background-color: #333333;
+        color: #e0e0e0;
+    }
+}
