@@ -70,7 +70,7 @@ function initializeMainFeatures() {
     }
 }
 
-// タブ切り替え
+// タブ切り替え（修正版 - データ読み込み状態を考慮）
 function switchTab(tabName) {
     tabBtns.forEach(btn => btn.classList.remove('active'));
     tabContents.forEach(content => content.classList.remove('active'));
@@ -83,8 +83,16 @@ function switchTab(tabName) {
         activeContent.classList.add('active');
         
         if (tabName === 'calendar') {
-            if (typeof renderCalendar === 'function') renderCalendar();
-            if (typeof renderMenuLegend === 'function') renderMenuLegend();
+            // カレンダータブが選択された場合の処理を改善
+            // 必要なデータが揃うまで少し待ってからレンダリング
+            setTimeout(() => {
+                if (typeof renderCalendar === 'function') {
+                    renderCalendar();
+                }
+                if (typeof renderMenuLegend === 'function') {
+                    renderMenuLegend();
+                }
+            }, 100); // 100ms待機してデータの読み込みを待つ
         }
     }
 }
@@ -92,12 +100,12 @@ function switchTab(tabName) {
 // 予約表示（休憩モード対応版）
 function displayReservations() {
     // 休憩モード時は今日の予約表示を修正
-    if (breakMode.turn) {
+    if (breakMode && breakMode.turn) {
         if (todayReservationsDiv) {
             todayReservationsDiv.innerHTML = `
                 <div style="text-align: center; padding: 20px; background-color: rgba(220, 53, 69, 0.2); border: 2px solid #dc3545; border-radius: 10px; margin: 20px 0;">
                     <h3 style="color: #dc3545; margin-bottom: 10px;">現在休憩中です</h3>
-                    <p style="color: #ffffff; font-size: 1.1em;">${breakMode.custom}</p>
+                    <p style="color: #ffffff; font-size: 1.1em;">${breakMode.custom || ''}</p>
                 </div>
             `;
         }
@@ -105,14 +113,16 @@ function displayReservations() {
         // 通常営業時の予約表示
         const today = new Date().toISOString().split('T')[0];
         
-        const todayReservations = reservations.filter(r => 
-            r.date >= today && r.states === 0
-        ).sort((a, b) => {
-            if (a.date === b.date) {
-                return a.Time.localeCompare(b.Time);
-            }
-            return a.date.localeCompare(b.date);
-        });
+        // reservations配列が存在することを確認
+        const todayReservations = (reservations && Array.isArray(reservations)) ? 
+            reservations.filter(r => 
+                r.date >= today && r.states === 0
+            ).sort((a, b) => {
+                if (a.date === b.date) {
+                    return a.Time.localeCompare(b.Time);
+                }
+                return a.date.localeCompare(b.date);
+            }) : [];
 
         if (todayReservationsDiv) {
             todayReservationsDiv.innerHTML = renderReservationsList(todayReservations, 'today');
@@ -126,8 +136,13 @@ function displayReservations() {
     }
 }
 
-// 検索フィルター適用
+// 検索フィルター適用（修正版 - 安全性向上）
 function getFilteredReservations() {
+    // reservations配列が存在することを確認
+    if (!reservations || !Array.isArray(reservations)) {
+        return [];
+    }
+    
     let filteredReservations = [...reservations];
     
     const searchText = searchTextInput ? searchTextInput.value.trim().toLowerCase() : '';
@@ -179,7 +194,7 @@ function handleClearSearch() {
 
 // 予約リストHTML生成（電話番号対応版）
 function renderReservationsList(reservationsList, type) {
-    if (reservationsList.length === 0) {
+    if (!reservationsList || reservationsList.length === 0) {
         return '<p>予約がありません。</p>';
     }
 
@@ -191,7 +206,7 @@ function renderReservationsList(reservationsList, type) {
         const email = reservation.mail || '';
         
         let actionsHTML = '';
-        if (type === 'today' && !breakMode.turn) {
+        if (type === 'today' && (!breakMode || !breakMode.turn)) {
             // 通常営業時のみアクションボタンを表示
             // 同行者の場合はメール送信ボタンを無効化
             const mailButtonDisabled = email === '同行者' ? 'disabled style="opacity: 0.5; cursor: not-allowed;"' : '';
@@ -256,7 +271,7 @@ function getStatusClass(status) {
 
 // 来店処理（休憩モード時は無効化）
 async function handleVisit(reservationId) {
-    if (breakMode.turn) {
+    if (breakMode && breakMode.turn) {
         alert('休憩中のため、来店処理はできません。');
         return;
     }
@@ -278,7 +293,7 @@ async function handleVisit(reservationId) {
 
 // キャンセル処理（休憩モード時は無効化）
 function handleCancel(reservationId) {
-    if (breakMode.turn) {
+    if (breakMode && breakMode.turn) {
         alert('休憩中のため、キャンセル処理はできません。');
         return;
     }
