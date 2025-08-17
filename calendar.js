@@ -38,7 +38,17 @@ function formatDateToLocal(date) {
     return `${year}-${month}-${day}`;
 }
 
-// カレンダー描画（修正版）
+// メニューカラー取得の安全版（修正版）
+function getMenuColorSafe(menuName) {
+    // currentMenusが存在し、メニューが定義されている場合のみ色を取得
+    if (currentMenus && typeof currentMenus === 'object' && Object.keys(currentMenus).length > 0) {
+        return getMenuColor(menuName);
+    }
+    // フォールバック：デフォルトカラーを返す
+    return '#ff6b35'; // オレンジ色をデフォルトとする
+}
+
+// カレンダー描画（修正版 - メニューデータの読み込み状態を考慮）
 function renderCalendar() {
     if (!calendarGrid) return;
     
@@ -84,7 +94,7 @@ function renderCalendar() {
         }
         
         // 休業日チェック（修正済み）
-        if (holidays.includes(dateString)) {
+        if (holidays && holidays.includes(dateString)) {
             dayElement.classList.add('holiday');
         }
         
@@ -94,7 +104,7 @@ function renderCalendar() {
         dayNumberElement.textContent = dayNumber;
         
         // 休業日ラベル
-        if (holidays.includes(dateString)) {
+        if (holidays && holidays.includes(dateString)) {
             const holidayLabel = document.createElement('div');
             holidayLabel.className = 'holiday-label';
             holidayLabel.textContent = '休業日';
@@ -107,28 +117,32 @@ function renderCalendar() {
         const reservationsContainer = document.createElement('div');
         reservationsContainer.className = 'day-reservations';
         
-        if (!holidays.includes(dateString)) {
-            const dayReservations = reservations.filter(r => 
-                r.date === dateString && r.states === 0
-            ).sort((a, b) => a.Time.localeCompare(b.Time));
-            
-            dayReservations.forEach(reservation => {
-                const reservationElement = document.createElement('button');
-                reservationElement.className = 'reservation-item-calendar';
+        if (!holidays || !holidays.includes(dateString)) {
+            // reservations配列が存在し、配列であることを確認
+            if (reservations && Array.isArray(reservations)) {
+                const dayReservations = reservations.filter(r => 
+                    r.date === dateString && r.states === 0
+                ).sort((a, b) => a.Time.localeCompare(b.Time));
                 
-                const customerName = reservation['Name-f'] || '';
-                reservationElement.textContent = `${reservation.Time} ${customerName}`;
-                
-                const menuColor = getMenuColor(reservation.Menu);
-                reservationElement.style.backgroundColor = menuColor;
-                reservationElement.style.color = '#ffffff';
-                
-                reservationElement.addEventListener('click', () => {
-                    showReservationDetail(reservation);
+                dayReservations.forEach(reservation => {
+                    const reservationElement = document.createElement('button');
+                    reservationElement.className = 'reservation-item-calendar';
+                    
+                    const customerName = reservation['Name-f'] || '';
+                    reservationElement.textContent = `${reservation.Time} ${customerName}`;
+                    
+                    // 修正：安全なメニューカラー取得
+                    const menuColor = getMenuColorSafe(reservation.Menu);
+                    reservationElement.style.backgroundColor = menuColor;
+                    reservationElement.style.color = '#ffffff';
+                    
+                    reservationElement.addEventListener('click', () => {
+                        showReservationDetail(reservation);
+                    });
+                    
+                    reservationsContainer.appendChild(reservationElement);
                 });
-                
-                reservationsContainer.appendChild(reservationElement);
-            });
+            }
         }
         
         dayElement.appendChild(reservationsContainer);
@@ -136,9 +150,12 @@ function renderCalendar() {
         
         currentDateObj.setDate(currentDateObj.getDate() + 1);
     }
+    
+    // カレンダー描画後にメニュー凡例も更新
+    renderMenuLegend();
 }
 
-// メニュー凡例描画
+// メニュー凡例描画（修正版 - メニューデータの読み込み状態を考慮）
 function renderMenuLegend() {
     if (!menuLegend) return;
     
@@ -147,31 +164,40 @@ function renderMenuLegend() {
     const legendGrid = document.createElement('div');
     legendGrid.className = 'legend-grid';
     
-    const menuNames = Object.keys(currentMenus);
-    
-    if (menuNames.length > 0) {
-        menuNames.forEach((menuName, index) => {
-            const color = getMenuColorByIndex(index);
-            
-            const legendItem = document.createElement('div');
-            legendItem.className = 'legend-item';
-            
-            const colorBox = document.createElement('div');
-            colorBox.className = 'legend-color';
-            colorBox.style.backgroundColor = color;
-            
-            const menuNameSpan = document.createElement('span');
-            menuNameSpan.textContent = menuName;
-            
-            legendItem.appendChild(colorBox);
-            legendItem.appendChild(menuNameSpan);
-            legendGrid.appendChild(legendItem);
-        });
+    // currentMenusが存在し、オブジェクトであることを確認
+    if (currentMenus && typeof currentMenus === 'object') {
+        const menuNames = Object.keys(currentMenus);
+        
+        if (menuNames.length > 0) {
+            menuNames.forEach((menuName, index) => {
+                const color = getMenuColorByIndex(index);
+                
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                
+                const colorBox = document.createElement('div');
+                colorBox.className = 'legend-color';
+                colorBox.style.backgroundColor = color;
+                
+                const menuNameSpan = document.createElement('span');
+                menuNameSpan.textContent = menuName;
+                
+                legendItem.appendChild(colorBox);
+                legendItem.appendChild(menuNameSpan);
+                legendGrid.appendChild(legendItem);
+            });
+        } else {
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'legend-empty';
+            emptyMessage.textContent = 'メニューが登録されていません';
+            legendGrid.appendChild(emptyMessage);
+        }
     } else {
-        const emptyMessage = document.createElement('div');
-        emptyMessage.className = 'legend-empty';
-        emptyMessage.textContent = 'メニューが登録されていません';
-        legendGrid.appendChild(emptyMessage);
+        // メニューデータがまだ読み込まれていない場合
+        const loadingMessage = document.createElement('div');
+        loadingMessage.className = 'legend-empty';
+        loadingMessage.textContent = 'メニューを読み込み中...';
+        legendGrid.appendChild(loadingMessage);
     }
     
     menuLegend.appendChild(legendGrid);
