@@ -1,4 +1,4 @@
-// 予約追加機能のJavaScript
+// 予約追加機能のJavaScript（カスタム時間入力対応版）
 
 // DOM要素
 const addReservationModal = document.getElementById('add-reservation-modal');
@@ -15,6 +15,7 @@ const addReservationTimeslotsDiv = document.getElementById('add-reservation-time
 
 // 選択された時間を保存する変数
 let selectedTimeSlot = null;
+let isCustomTime = false; // カスタム時間かどうかのフラグ
 
 // 時間スロット設定（予約サイトと同じ）
 const timeSlots = {
@@ -111,6 +112,7 @@ function resetAddReservationForm() {
     if (addReservationTimeslotsDiv) addReservationTimeslotsDiv.innerHTML = '';
     
     selectedTimeSlot = null;
+    isCustomTime = false;
     
     if (submitAddReservationBtn) {
         submitAddReservationBtn.disabled = false;
@@ -157,7 +159,7 @@ async function handleDateChange() {
     await displayAvailableTimeSlots(selectedDate);
 }
 
-// 利用可能な時間スロットを表示
+// 利用可能な時間スロットを表示（カスタム時間対応版）
 async function displayAvailableTimeSlots(date) {
     if (!addReservationTimeslotsDiv) return;
     
@@ -177,6 +179,7 @@ async function displayAvailableTimeSlots(date) {
         
         addReservationTimeslotsDiv.innerHTML = '';
         
+        // 既存の時間スロットボタンを生成
         availableSlots.forEach(time => {
             const timeSlotBtn = document.createElement('button');
             timeSlotBtn.className = 'time-slot-btn';
@@ -191,11 +194,24 @@ async function displayAvailableTimeSlots(date) {
                 timeSlotBtn.disabled = true;
                 timeSlotBtn.textContent += ' (予約済み)';
             } else {
-                timeSlotBtn.addEventListener('click', () => selectTimeSlot(time, timeSlotBtn));
+                timeSlotBtn.addEventListener('click', () => selectTimeSlot(time, timeSlotBtn, false));
             }
             
             addReservationTimeslotsDiv.appendChild(timeSlotBtn);
         });
+        
+        // カスタム時間ボタンを追加
+        const customTimeBtn = document.createElement('button');
+        customTimeBtn.className = 'time-slot-btn custom-time-btn';
+        customTimeBtn.textContent = '⏰ カスタム';
+        customTimeBtn.type = 'button';
+        customTimeBtn.style.backgroundColor = '#28a745';
+        customTimeBtn.style.borderColor = '#28a745';
+        customTimeBtn.style.color = '#ffffff';
+        customTimeBtn.style.fontWeight = 'bold';
+        
+        customTimeBtn.addEventListener('click', () => openCustomTimeModal(dayReservations));
+        addReservationTimeslotsDiv.appendChild(customTimeBtn);
         
     } catch (error) {
         console.error('Error loading time slots:', error);
@@ -203,15 +219,213 @@ async function displayAvailableTimeSlots(date) {
     }
 }
 
-// 時間スロットを選択
-function selectTimeSlot(time, buttonElement) {
+// カスタム時間入力モーダルを開く
+function openCustomTimeModal(dayReservations) {
+    const modalHTML = `
+        <div id="custom-time-modal" class="modal active">
+            <div class="modal-content">
+                <h3>カスタム時間入力</h3>
+                <div class="custom-time-form">
+                    <div class="form-group">
+                        <label for="custom-time-input">予約時間を入力してください（HH:MM形式）</label>
+                        <input type="time" id="custom-time-input" min="08:00" max="19:00">
+                    </div>
+                    
+                    <div class="custom-time-notes">
+                        <h4>⚠️ カスタム時間の注意事項</h4>
+                        <ul>
+                            <li>営業時間内（8:00〜19:00）で設定してください</li>
+                            <li>既存の予約と重複しないように確認してください</li>
+                            <li>1分単位で設定可能です</li>
+                            <li>お客様への確認を忘れずに行ってください</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="existing-reservations">
+                        <h4>📅 この日の既存予約</h4>
+                        <div id="existing-reservations-list" class="existing-list">
+                            ${dayReservations.length > 0 ? 
+                                dayReservations.map(r => 
+                                    `<div class="existing-item">${r.Time} - ${r['Name-f'] || '名前なし'} (${r.Menu || 'メニューなし'})</div>`
+                                ).join('') :
+                                '<div class="existing-item no-reservations">この日は予約がありません</div>'
+                            }
+                        </div>
+                    </div>
+                    
+                    <div class="modal-buttons">
+                        <button id="confirm-custom-time-btn" class="btn btn-success">この時間で設定</button>
+                        <button id="cancel-custom-time-btn" class="btn btn-secondary">キャンセル</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // 既存のカスタム時間モーダルがある場合は削除
+    const existingModal = document.getElementById('custom-time-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // モーダルを追加
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // イベントリスナー設定
+    const customTimeInput = document.getElementById('custom-time-input');
+    const confirmBtn = document.getElementById('confirm-custom-time-btn');
+    const cancelBtn = document.getElementById('cancel-custom-time-btn');
+    
+    // 現在時刻を初期値として設定（営業時間内の場合）
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    
+    if (currentHour >= 8 && currentHour < 19) {
+        const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+        customTimeInput.value = timeString;
+    } else {
+        customTimeInput.value = '10:00'; // デフォルト値
+    }
+    
+    // 確認ボタンのイベントリスナー
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', function() {
+            const customTime = customTimeInput.value;
+            if (validateCustomTime(customTime, dayReservations)) {
+                selectTimeSlot(customTime, null, true);
+                closeCustomTimeModal();
+            }
+        });
+    }
+    
+    // キャンセルボタンのイベントリスナー
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', closeCustomTimeModal);
+    }
+    
+    // モーダル外クリックで閉じる
+    const modal = document.getElementById('custom-time-modal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                closeCustomTimeModal();
+            }
+        });
+    }
+    
+    // 入力フォーカス
+    if (customTimeInput) {
+        customTimeInput.focus();
+    }
+}
+
+// カスタム時間のバリデーション
+function validateCustomTime(timeString, dayReservations) {
+    if (!timeString) {
+        alert('時間を入力してください。');
+        return false;
+    }
+    
+    // 時間形式のチェック
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+    if (!timeRegex.test(timeString)) {
+        alert('正しい時間形式（HH:MM）で入力してください。');
+        return false;
+    }
+    
+    // 営業時間のチェック
+    const [hours, minutes] = timeString.split(':').map(Number);
+    const timeInMinutes = hours * 60 + minutes;
+    const startTime = 8 * 60; // 8:00
+    const endTime = 19 * 60;  // 19:00
+    
+    if (timeInMinutes < startTime || timeInMinutes >= endTime) {
+        alert('営業時間（8:00〜19:00）内で設定してください。');
+        return false;
+    }
+    
+    // 既存予約との重複チェック
+    const isConflict = dayReservations.some(r => r.Time === timeString);
+    if (isConflict) {
+        const conflictReservation = dayReservations.find(r => r.Time === timeString);
+        alert(`この時間は既に予約があります。\n${timeString} - ${conflictReservation['Name-f'] || '名前なし'} (${conflictReservation.Menu || 'メニューなし'})`);
+        return false;
+    }
+    
+    return true;
+}
+
+// カスタム時間モーダルを閉じる
+function closeCustomTimeModal() {
+    const modal = document.getElementById('custom-time-modal');
+    if (modal) {
+        modal.remove();
+    }
+}
+
+// 時間スロットを選択（カスタム時間対応版）
+function selectTimeSlot(time, buttonElement, isCustom = false) {
     // 既存の選択を解除
     const allTimeSlotBtns = addReservationTimeslotsDiv.querySelectorAll('.time-slot-btn');
     allTimeSlotBtns.forEach(btn => btn.classList.remove('selected'));
     
     // 新しい選択を設定
-    buttonElement.classList.add('selected');
+    if (buttonElement) {
+        buttonElement.classList.add('selected');
+    }
+    
     selectedTimeSlot = time;
+    isCustomTime = isCustom;
+    
+    // カスタム時間の場合は視覚的な表示を更新
+    if (isCustom) {
+        // カスタム時間ボタンを選択状態にする
+        const customBtn = addReservationTimeslotsDiv.querySelector('.custom-time-btn');
+        if (customBtn) {
+            customBtn.classList.add('selected');
+            customBtn.textContent = `⏰ カスタム (${time})`;
+            customBtn.style.backgroundColor = '#ff6b35';
+            customBtn.style.borderColor = '#ff6b35';
+        }
+        
+        // 確認メッセージを表示
+        const confirmationDiv = document.createElement('div');
+        confirmationDiv.className = 'custom-time-confirmation';
+        confirmationDiv.style.cssText = `
+            background-color: rgba(40, 167, 69, 0.2);
+            border: 2px solid #28a745;
+            border-radius: 8px;
+            padding: 10px;
+            margin-top: 10px;
+            text-align: center;
+            color: #28a745;
+            font-weight: bold;
+        `;
+        confirmationDiv.innerHTML = `✅ カスタム時間 ${time} が選択されました`;
+        
+        // 既存の確認メッセージがある場合は削除
+        const existingConfirmation = addReservationTimeslotsDiv.querySelector('.custom-time-confirmation');
+        if (existingConfirmation) {
+            existingConfirmation.remove();
+        }
+        
+        addReservationTimeslotsDiv.appendChild(confirmationDiv);
+    } else {
+        // 通常の時間スロットの場合は確認メッセージを削除
+        const existingConfirmation = addReservationTimeslotsDiv.querySelector('.custom-time-confirmation');
+        if (existingConfirmation) {
+            existingConfirmation.remove();
+        }
+        
+        // カスタムボタンの表示をリセット
+        const customBtn = addReservationTimeslotsDiv.querySelector('.custom-time-btn');
+        if (customBtn) {
+            customBtn.textContent = '⏰ カスタム';
+            customBtn.style.backgroundColor = '#28a745';
+            customBtn.style.borderColor = '#28a745';
+        }
+    }
 }
 
 // 電話番号のバリデーション
@@ -235,7 +449,7 @@ function generateReservationNumber() {
     return Math.floor(Math.random() * 90000000) + 10000000;
 }
 
-// 予約追加処理
+// 予約追加処理（カスタム時間対応版）
 async function handleAddReservation() {
     // フォームの値を取得
     const date = addReservationDateInput ? addReservationDateInput.value : '';
@@ -268,6 +482,15 @@ async function handleAddReservation() {
         return;
     }
     
+    // カスタム時間の場合の追加確認
+    if (isCustomTime) {
+        const confirmMessage = `カスタム時間 ${selectedTimeSlot} で予約を追加しますか？\n\n⚠️ 注意：\n• 通常の時間スロット外です\n• お客様への連絡を忘れずに行ってください\n• 必要に応じて確認メールを送信してください`;
+        
+        if (!confirm(confirmMessage)) {
+            return;
+        }
+    }
+    
     // 送信ボタンを無効化
     if (submitAddReservationBtn) {
         submitAddReservationBtn.disabled = true;
@@ -286,15 +509,16 @@ async function handleAddReservation() {
             reservationNumber: reservationNumber,
             Menu: menuName,
             "Name-f": name,
-            "Name-s": phone || '管理者追加（電話番号なし）', // 電話番号が空の場合のデフォルト値
+            "Name-s": phone || (isCustomTime ? '管理者追加（カスタム時間）' : '管理者追加（電話番号なし）'),
             Time: selectedTimeSlot,
             WorkTime: selectedMenu.worktime,
             date: date,
-            mail: email || '管理者追加',
+            mail: email || (isCustomTime ? 'カスタム時間予約' : '管理者追加'),
             states: 0
         };
         
         console.log('予約データ:', reservationData);
+        console.log('カスタム時間フラグ:', isCustomTime);
         
         // 予約サイトと同じバッチAPIを使用
         const response = await fetch(`${RESERVATION_API_BASE_URL}/reservations/batch`, {
@@ -310,7 +534,6 @@ async function handleAddReservation() {
         });
         
         console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
         
         // レスポンスの内容を確認
         const responseText = await response.text();
@@ -319,7 +542,7 @@ async function handleAddReservation() {
         // HTMLが返された場合の処理
         if (responseText.startsWith('<!doctype') || responseText.startsWith('<!DOCTYPE') || responseText.includes('<html>')) {
             console.error('HTMLレスポンスが返されました:', responseText.substring(0, 200));
-            throw new Error('APIエンドポイントが見つからないか、CORS設定に問題があります。予約サイトのAPIと同じ設定を確認してください。');
+            throw new Error('APIエンドポイントが見つからないか、CORS設定に問題があります。');
         }
         
         // JSONとして解析を試行
@@ -328,11 +551,8 @@ async function handleAddReservation() {
             result = JSON.parse(responseText);
         } catch (parseError) {
             console.error('JSON解析エラー:', parseError);
-            console.error('レスポンステキスト:', responseText);
-            throw new Error('サーバーから無効なJSON応答が返されました。API設定を確認してください。');
+            throw new Error('サーバーから無効なJSON応答が返されました。');
         }
-        
-        console.log('解析された結果:', result);
         
         if (!response.ok) {
             throw new Error(result.message || result.error || `HTTP error! status: ${response.status}`);
@@ -344,7 +564,11 @@ async function handleAddReservation() {
         }
         
         // 成功時の処理
-        alert(`予約を追加しました。\n予約番号: ${reservationData.reservationNumber}`);
+        const successMessage = isCustomTime ? 
+            `カスタム時間での予約を追加しました。\n予約番号: ${reservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n⚠️ お客様への連絡をお忘れなく！` :
+            `予約を追加しました。\n予約番号: ${reservationData.reservationNumber}`;
+        
+        alert(successMessage);
         
         // モーダルを閉じる
         closeAddReservationModal();
@@ -368,12 +592,17 @@ async function handleAddReservation() {
         // HTMLレスポンスが返された場合の特別処理
         if (error.message.includes('Unexpected token') || 
             error.message.includes('<!doctype') || 
-            error.message.includes('HTMLレスポンス')) {
+            error.message.includes('HTMLレスポンス') ||
+            error.message.includes('APIエンドポイント')) {
             
             // デモ用のローカル処理を実行
             console.log('APIが利用できないため、ローカルデモモードで実行します');
             
-            if (confirm('APIサーバーに接続できませんが、デモ用にローカルで予約を追加しますか？\n（実際のデータベースには保存されません）')) {
+            const demoMessage = isCustomTime ?
+                `APIサーバーに接続できませんが、デモ用にカスタム時間（${selectedTimeSlot}）でローカル予約を追加しますか？\n（実際のデータベースには保存されません）` :
+                `APIサーバーに接続できませんが、デモ用にローカルで予約を追加しますか？\n（実際のデータベースには保存されません）`;
+            
+            if (confirm(demoMessage)) {
                 try {
                     // ローカルの予約配列に追加
                     const localReservationData = {
@@ -381,11 +610,11 @@ async function handleAddReservation() {
                         reservationNumber: generateReservationNumber(),
                         Menu: menuName,
                         "Name-f": name,
-                        "Name-s": phone || '管理者追加（電話番号なし）',
+                        "Name-s": phone || (isCustomTime ? '管理者追加（カスタム時間）' : '管理者追加（電話番号なし）'),
                         Time: selectedTimeSlot,
                         WorkTime: selectedMenu.worktime,
                         date: date,
-                        mail: email || '管理者追加',
+                        mail: email || (isCustomTime ? 'カスタム時間予約' : '管理者追加'),
                         states: 0
                     };
                     
@@ -394,7 +623,11 @@ async function handleAddReservation() {
                         reservations.push(localReservationData);
                     }
                     
-                    alert(`デモ用予約を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n\n※これはデモ用です。実際のデータベースには保存されていません。`);
+                    const demoSuccessMessage = isCustomTime ?
+                        `デモ用カスタム時間予約を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n※これはデモ用です。実際のデータベースには保存されていません。` :
+                        `デモ用予約を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n\n※これはデモ用です。実際のデータベースには保存されていません。`;
+                    
+                    alert(demoSuccessMessage);
                     
                     // モーダルを閉じる
                     closeAddReservationModal();
@@ -420,7 +653,9 @@ async function handleAddReservation() {
         }
         
         // エラーメッセージの表示
-        let errorMessage = '予約の追加に失敗しました。';
+        let errorMessage = isCustomTime ? 
+            'カスタム時間での予約追加に失敗しました。' :
+            '予約の追加に失敗しました。';
         
         if (error.message.includes('Unexpected token') || error.message.includes('<!doctype')) {
             errorMessage = 'APIサーバーに接続できません。\n\n考えられる原因：\n• APIエンドポイントが正しくない\n• CORS設定の問題\n• サーバーがダウンしている\n\nシステム管理者にお問い合わせください。';
@@ -445,6 +680,8 @@ async function handleAddReservation() {
             message: error.message,
             stack: error.stack,
             timestamp: new Date().toISOString(),
+            isCustomTime: isCustomTime,
+            selectedTime: selectedTimeSlot,
             reservationData: {
                 date: date,
                 name: name,
