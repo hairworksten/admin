@@ -205,10 +205,11 @@ async function displayAvailableTimeSlots(date) {
         customTimeBtn.className = 'time-slot-btn custom-time-btn';
         customTimeBtn.textContent = 'カスタム';
         customTimeBtn.type = 'button';
-        customTimeBtn.style.backgroundColor = '#28a745';
-        customTimeBtn.style.borderColor = '#28a745';
+        // 他の時刻ボタンと同じスタイルにする
+        customTimeBtn.style.backgroundColor = '#4a4a4a';
+        customTimeBtn.style.borderColor = '#555';
         customTimeBtn.style.color = '#ffffff';
-        customTimeBtn.style.fontWeight = 'bold';
+        customTimeBtn.style.fontWeight = 'normal';
         
         customTimeBtn.addEventListener('click', () => openCustomTimeModal(dayReservations));
         addReservationTimeslotsDiv.appendChild(customTimeBtn);
@@ -412,8 +413,10 @@ function selectTimeSlot(time, buttonElement, isCustom = false) {
         const customBtn = addReservationTimeslotsDiv.querySelector('.custom-time-btn');
         if (customBtn) {
             customBtn.textContent = 'カスタム';
-            customBtn.style.backgroundColor = '#28a745';
-            customBtn.style.borderColor = '#28a745';
+            customBtn.style.backgroundColor = '#4a4a4a';
+            customBtn.style.borderColor = '#555';
+            customBtn.style.color = '#ffffff';
+            customBtn.style.fontWeight = 'normal';
         }
     }
 }
