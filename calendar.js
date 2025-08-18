@@ -185,18 +185,36 @@ function renderCalendar() {
 
 // シフト情報取得関数のフォールバック
 function getShiftForDate(dateString) {
-    // window.getShiftForDate が定義されている場合はそれを使用
-    if (typeof window.getShiftForDate === 'function') {
-        return window.getShiftForDate(dateString);
+    try {
+        // window.getShiftForDate が定義されている場合はそれを使用
+        if (typeof window.getShiftForDate === 'function') {
+            return window.getShiftForDate(dateString);
+        }
+        
+        // フォールバック：グローバルのshiftDataから取得
+        if (typeof shiftData !== 'undefined' && shiftData && shiftData[dateString]) {
+            return shiftData[dateString];
+        }
+        
+        // ローカルストレージから取得を試行
+        try {
+            const savedShiftData = localStorage.getItem('shiftData');
+            if (savedShiftData) {
+                const parsedShiftData = JSON.parse(savedShiftData);
+                if (parsedShiftData && parsedShiftData[dateString]) {
+                    return parsedShiftData[dateString];
+                }
+            }
+        } catch (storageError) {
+            console.warn('ローカルストレージからのシフトデータ取得エラー:', storageError);
+        }
+        
+        // データがない場合は空配列を返す
+        return [];
+    } catch (error) {
+        console.error('シフトデータ取得エラー:', error);
+        return [];
     }
-    
-    // フォールバック：グローバルのshiftDataから取得
-    if (typeof shiftData !== 'undefined' && shiftData[dateString]) {
-        return shiftData[dateString];
-    }
-    
-    // データがない場合は空配列を返す
-    return [];
 }
 
 // メニュー凡例描画（修正版 - メニューデータの読み込み状態を考慮）
