@@ -175,9 +175,11 @@ function showLoginScreen() {
     hideError();
 }
 
-// 初期データ読み込み（修正版 - 順序を最適化）
+// 初期データ読み込み（修正版 - 順序を最適化、シフトデータ確認を追加）
 async function loadInitialData() {
     try {
+        console.log('[Auth] 初期データ読み込み開始');
+        
         // 1. まず基本データを並行読み込み
         await Promise.all([
             loadBreakMode(),
@@ -193,23 +195,76 @@ async function loadInitialData() {
         // 3. 最後にメールテンプレートを読み込み
         await loadMailTemplates();
         
-        // 4. 全データ読み込み完了後にカレンダーが表示されている場合は再描画
+        // 4. シフトデータの確認と読み込み
+        await checkAndLoadShiftData();
+        
+        // 5. 全データ読み込み完了後にカレンダーが表示されている場合は再描画
         const calendarTab = document.getElementById('calendar-tab');
         if (calendarTab && calendarTab.classList.contains('active')) {
+            // 少し遅延を入れてデータが確実に読み込まれてから描画
             setTimeout(() => {
                 if (typeof renderCalendar === 'function') {
-                    renderCalendar();
+                    console.log('[Auth] ローカルストレージからシフトデータを読み込み:', Object.keys(parsedShiftData).length, '日分');
+                
+                // シフト管理機能が初期化されていない場合は初期化を促す
+                if (typeof window.initializeShiftManagement === 'function' && !window.shiftManagementInitialized) {
+                    console.log('[Auth] シフト管理機能の初期化を実行');
+                    setTimeout(() => {
+                        window.initializeShiftManagement();
+                    }, 100);
                 }
-                if (typeof renderMenuLegend === 'function') {
-                    renderMenuLegend();
-                }
-            }, 50);
+                
+            } catch (parseError) {
+                console.error('[Auth] シフトデータ解析エラー:', parseError);
+                localStorage.removeItem('shiftData');
+                localStorage.removeItem('shiftFileName');
+            }
+        } else {
+            console.log('[Auth] ローカルストレージにシフトデータなし');
+            
+            // 空のシフトデータを設定
+            if (typeof window !== 'undefined') {
+                window.shiftData = {};
+            }
+            if (typeof shiftData !== 'undefined') {
+                shiftData = {};
+            }
         }
         
-        console.log('初期データ読み込み完了');
+        // サーバーからシフトデータを取得を試行（失敗してもローカルデータを使用）
+        try {
+            await loadShiftDataFromServer();
+        } catch (serverError) {
+            console.warn('[Auth] サーバーからのシフトデータ取得失敗（ローカルデータを使用）:', serverError.message);
+        }
         
     } catch (error) {
-        console.error('初期データ読み込みエラー:', error);
+        console.error('[Auth] シフトデータ確認エラー:', error);
+    }
+}
+
+// サーバーからシフトデータを読み込み - 新規追加
+async function loadShiftDataFromServer() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/shifts`);
+        if (response.ok) {
+            const serverShiftData = await response.json();
+            
+            if (serverShiftData && typeof serverShiftData === 'object') {
+                // サーバーデータを統合
+                if (typeof window !== 'undefined') {
+                    window.shiftData = { ...window.shiftData, ...serverShiftData };
+                }
+                if (typeof shiftData !== 'undefined') {
+                    shiftData = { ...shiftData, ...serverShiftData };
+                }
+                
+                console.log('[Auth] サーバーからシフトデータを取得・統合');
+            }
+        }
+    } catch (error) {
+        // サーバーエラーは無視（ローカルデータを使用）
+        console.warn('[Auth] サーバーシフトデータ取得エラー:', error.message);
     }
 }
 
@@ -594,4 +649,41 @@ async function loadNotices() {
         console.error('Error loading notices:', error);
         notices = [];
     }
+}Auth] カレンダー再描画実行');
+                    renderCalendar();
+                }
+                if (typeof renderMenuLegend === 'function') {
+                    renderMenuLegend();
+                }
+            }, 200);
+        }
+        
+        console.log('[Auth] 初期データ読み込み完了');
+        
+    } catch (error) {
+        console.error('[Auth] 初期データ読み込みエラー:', error);
+    }
 }
+
+// シフトデータの確認と読み込み - 新規追加
+async function checkAndLoadShiftData() {
+    try {
+        console.log('[Auth] シフトデータ確認開始');
+        
+        // ローカルストレージからシフトデータを確認
+        const savedShiftData = localStorage.getItem('shiftData');
+        if (savedShiftData) {
+            try {
+                const parsedShiftData = JSON.parse(savedShiftData);
+                
+                // グローバル変数に設定
+                if (typeof window !== 'undefined') {
+                    window.shiftData = parsedShiftData;
+                }
+                
+                // shift-management.js のグローバル変数にも設定
+                if (typeof shiftData !== 'undefined') {
+                    shiftData = parsedShiftData;
+                }
+                
+                console.log('[
