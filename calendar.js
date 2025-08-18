@@ -48,7 +48,7 @@ function getMenuColorSafe(menuName) {
     return '#ff6b35'; // オレンジ色をデフォルトとする
 }
 
-// カレンダー描画（修正版 - メニューデータの読み込み状態を考慮）
+// カレンダー描画（シフト情報表示対応版）
 function renderCalendar() {
     if (!calendarGrid) return;
     
@@ -98,6 +98,10 @@ function renderCalendar() {
             dayElement.classList.add('holiday');
         }
         
+        // 日付ヘッダー部分（日付番号とシフト情報を横並び）
+        const dayHeader = document.createElement('div');
+        dayHeader.className = 'day-header';
+        
         // 日付番号表示
         const dayNumberElement = document.createElement('div');
         dayNumberElement.className = 'day-number';
@@ -111,7 +115,31 @@ function renderCalendar() {
             dayNumberElement.appendChild(holidayLabel);
         }
         
-        dayElement.appendChild(dayNumberElement);
+        dayHeader.appendChild(dayNumberElement);
+        
+        // シフト情報表示（休業日以外）
+        if (!holidays || !holidays.includes(dateString)) {
+            const shiftInfoElement = document.createElement('div');
+            shiftInfoElement.className = 'day-shift-info';
+            
+            // シフトデータを取得
+            const shiftEmployees = getShiftForDate ? getShiftForDate(dateString) : [];
+            
+            shiftEmployees.forEach(employee => {
+                const employeeElement = document.createElement('div');
+                employeeElement.className = 'shift-employee';
+                
+                // 表示テキスト（従業員名のみ）
+                employeeElement.textContent = employee.name;
+                employeeElement.title = `担当: ${employee.name}`; // ツールチップ
+                
+                shiftInfoElement.appendChild(employeeElement);
+            });
+            
+            dayHeader.appendChild(shiftInfoElement);
+        }
+        
+        dayElement.appendChild(dayHeader);
         
         // 予約リスト表示
         const reservationsContainer = document.createElement('div');
@@ -153,6 +181,22 @@ function renderCalendar() {
     
     // カレンダー描画後にメニュー凡例も更新
     renderMenuLegend();
+}
+
+// シフト情報取得関数のフォールバック
+function getShiftForDate(dateString) {
+    // window.getShiftForDate が定義されている場合はそれを使用
+    if (typeof window.getShiftForDate === 'function') {
+        return window.getShiftForDate(dateString);
+    }
+    
+    // フォールバック：グローバルのshiftDataから取得
+    if (typeof shiftData !== 'undefined' && shiftData[dateString]) {
+        return shiftData[dateString];
+    }
+    
+    // データがない場合は空配列を返す
+    return [];
 }
 
 // メニュー凡例描画（修正版 - メニューデータの読み込み状態を考慮）
