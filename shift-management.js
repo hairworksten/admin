@@ -34,9 +34,23 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// タブ切り替え時にもシフト管理UIを確認
+document.addEventListener('click', function(e) {
+    if (e.target && e.target.getAttribute('data-tab') === 'calendar') {
+        setTimeout(() => {
+            if (!document.getElementById('shift-management-ui')) {
+                console.log('カレンダータブ選択時にシフト管理UIを作成');
+                createShiftUploadInterface();
+                updateShiftStatus();
+            }
+        }, 200);
+    }
+});
+
 // グローバル関数として公開
 window.getShiftForDate = getShiftForDate;
-window.initializeShiftManagement = initializeShiftManagement;// シフト表管理機能
+window.initializeShiftManagement = initializeShiftManagement;
+window.createShiftUploadInterface = createShiftUploadInterface;// シフト表管理機能
 
 // グローバル変数
 let shiftData = {};
@@ -49,32 +63,46 @@ let shiftStatusDiv = null;
 
 // シフト管理機能の初期化
 function initializeShiftManagement() {
+    // カレンダータブが存在するかチェック
+    const calendarTab = document.getElementById('calendar-tab');
+    if (!calendarTab) {
+        console.warn('カレンダータブが見つかりません');
+        return;
+    }
+    
+    // シフト管理UIを作成
     createShiftUploadInterface();
     
     // カレンダータブが表示されたときにシフト情報も表示
-    const calendarTab = document.getElementById('calendar-tab');
-    if (calendarTab) {
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                    if (calendarTab.classList.contains('active')) {
-                        setTimeout(() => {
-                            if (typeof renderCalendar === 'function') {
-                                renderCalendar();
-                            }
-                        }, 100);
-                    }
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                if (calendarTab.classList.contains('active')) {
+                    setTimeout(() => {
+                        // シフト管理UIが存在しない場合は作成
+                        if (!document.getElementById('shift-management-ui')) {
+                            createShiftUploadInterface();
+                        }
+                        
+                        if (typeof renderCalendar === 'function') {
+                            renderCalendar();
+                        }
+                    }, 100);
                 }
-            });
+            }
         });
-        observer.observe(calendarTab, { attributes: true });
-    }
+    });
+    observer.observe(calendarTab, { attributes: true });
 }
 
 // シフトアップロード用のUIを作成
 function createShiftUploadInterface() {
+    // カレンダータブ内のsectionを探す
     const calendarSection = document.querySelector('#calendar-tab .section');
-    if (!calendarSection) return;
+    if (!calendarSection) {
+        console.warn('カレンダーセクションが見つかりません');
+        return;
+    }
 
     // 既存のシフト管理UIがある場合は削除
     const existingShiftUI = document.getElementById('shift-management-ui');
@@ -100,14 +128,29 @@ function createShiftUploadInterface() {
             </div>
             <div id="shift-status" class="shift-status"></div>
             <div id="shift-preview" class="shift-preview" style="display: none;"></div>
+            <div class="shift-format-info" style="margin-top: 15px; padding: 10px; background-color: #4a4a4a; border-radius: 6px; border: 1px solid #555;">
+                <h4 style="color: #17a2b8; margin-bottom: 8px; font-size: 14px;">📝 Excelファイル形式</h4>
+                <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #ccc;">
+                    <li>A1セル: 「YYYY年M月」形式（例：2025年7月）</li>
+                    <li>B3行から: 日付（1,2,3...31）</li>
+                    <li>A5行から: 従業員名</li>
+                    <li>該当セルに「Y」で出勤マーク</li>
+                </ul>
+            </div>
         </div>
     `;
 
-    // カレンダーコントロールの前に挿入
+    // h2タグの後、calendar-controlsの前に挿入
+    const h2Element = calendarSection.querySelector('h2');
     const calendarControls = calendarSection.querySelector('.calendar-controls');
-    if (calendarControls) {
+    
+    if (h2Element && calendarControls) {
         calendarSection.insertBefore(shiftUI, calendarControls);
+    } else if (h2Element) {
+        // calendar-controlsが見つからない場合はh2の後に挿入
+        h2Element.parentNode.insertBefore(shiftUI, h2Element.nextSibling);
     } else {
+        // どちらも見つからない場合は最初に挿入
         calendarSection.insertBefore(shiftUI, calendarSection.firstChild);
     }
 
@@ -136,6 +179,8 @@ function createShiftUploadInterface() {
 
     // 既存のシフトデータがある場合は状態を更新
     updateShiftStatus();
+    
+    console.log('シフト管理UIを作成しました');
 }
 
 // シフトファイルアップロード処理
@@ -153,6 +198,12 @@ async function handleShiftFileUpload(event) {
     try {
         // ファイルを読み込み
         const arrayBuffer = await file.arrayBuffer();
+        
+        // SheetJSが利用可能かチェック
+        if (typeof XLSX === 'undefined') {
+            throw new Error('XLSX ライブラリが読み込まれていません。ページをリロードしてください。');
+        }
+        
         const workbook = XLSX.read(arrayBuffer, {
             cellStyles: true,
             cellFormulas: true,
@@ -161,30 +212,47 @@ async function handleShiftFileUpload(event) {
             sheetStubs: true
         });
 
+        console.log('Excelファイル読み込み成功. シート数:', workbook.SheetNames.length);
+        console.log('シート名:', workbook.SheetNames);
+
         // シフトデータを解析
         const parsedShiftData = parseShiftExcel(workbook);
         
         if (Object.keys(parsedShiftData).length === 0) {
-            throw new Error('有効なシフトデータが見つかりませんでした。');
+            throw new Error('有効なシフトデータが見つかりませんでした。ファイル形式を確認してください。');
         }
 
         // グローバル変数に保存
-        shiftData = parsedShiftData;
+        if (typeof window !== 'undefined') {
+            window.shiftData = parsedShiftData;
+        }
+        
+        // ローカル変数にも保存
+        if (typeof shiftData !== 'undefined') {
+            shiftData = parsedShiftData;
+        }
+        
         shiftFileUploaded = true;
 
-        // データベースに保存
-        await saveShiftDataToDatabase(shiftData);
+        // データベースに保存（エラーが発生しても続行）
+        try {
+            await saveShiftDataToDatabase(parsedShiftData);
+        } catch (dbError) {
+            console.warn('データベース保存に失敗しましたが、ローカルデータは利用可能です:', dbError);
+        }
 
         // ローカルストレージに保存
-        localStorage.setItem('shiftData', JSON.stringify(shiftData));
+        localStorage.setItem('shiftData', JSON.stringify(parsedShiftData));
         localStorage.setItem('shiftFileName', file.name);
 
-        showShiftSuccess(`シフト表「${file.name}」を読み込み、データベースに保存しました。`);
+        showShiftSuccess(`シフト表「${file.name}」を読み込みました。`);
         showShiftPreview();
         
         // カレンダーを再描画
         if (typeof renderCalendar === 'function') {
-            renderCalendar();
+            setTimeout(() => {
+                renderCalendar();
+            }, 100);
         }
 
     } catch (error) {
@@ -200,62 +268,171 @@ function parseShiftExcel(workbook) {
     
     console.log('利用可能なシート:', workbook.SheetNames);
     
+    if (workbook.SheetNames.length === 0) {
+        throw new Error('Excelファイルにシートが見つかりません。');
+    }
+    
     // 各シートを処理
     workbook.SheetNames.forEach(sheetName => {
         try {
             console.log(`シート「${sheetName}」を処理中...`);
             
             const worksheet = workbook.Sheets[sheetName];
-            const range = XLSX.utils.decode_range(worksheet['!ref']);
-            
-            // A1セルから年月情報を取得
-            let yearMonth = null;
-            const a1Cell = worksheet['A1'];
-            if (a1Cell && a1Cell.v) {
-                const yearMonthMatch = String(a1Cell.v).match(/(\d{4})年(\d{1,2})月/);
-                if (yearMonthMatch) {
-                    const year = yearMonthMatch[1];
-                    const month = String(parseInt(yearMonthMatch[2])).padStart(2, '0');
-                    yearMonth = `${year}-${month}`;
-                    console.log(`年月情報: ${yearMonth}`);
-                }
-            }
-            
-            if (!yearMonth) {
-                console.warn(`シート「${sheetName}」: A1セルに年月情報が見つかりません`);
+            if (!worksheet || !worksheet['!ref']) {
+                console.warn(`シート「${sheetName}」が空または無効です`);
                 return;
             }
             
-            // B3行から日付を読み取り
-            const dateRow = 3; // B3, C3, D3... (1-indexed)
+            const range = XLSX.utils.decode_range(worksheet['!ref']);
+            console.log(`シート「${sheetName}」の範囲:`, range);
+            
+            // A1セルから年月情報を取得（複数形式対応）
+            let yearMonth = null;
+            const a1Cell = worksheet['A1'];
+            if (a1Cell && (a1Cell.v !== null && a1Cell.v !== undefined)) {
+                console.log('A1セルの値:', a1Cell.v, 'タイプ:', typeof a1Cell.v);
+                
+                // 数値（Excelの日付）の場合
+                if (typeof a1Cell.v === 'number') {
+                    try {
+                        // ExcelのシリアルナンバーをJavaScriptの日付に変換
+                        const excelDate = XLSX.SSF.parse_date_code(a1Cell.v);
+                        if (excelDate) {
+                            const year = excelDate.y;
+                            const month = String(excelDate.m).padStart(2, '0');
+                            yearMonth = `${year}-${month}`;
+                            console.log(`A1セル（数値）から年月情報: ${yearMonth}`);
+                        }
+                    } catch (dateParseError) {
+                        console.warn('A1セルの日付解析エラー:', dateParseError);
+                    }
+                }
+                
+                // 文字列の場合
+                if (!yearMonth && typeof a1Cell.v === 'string') {
+                    const yearMonthMatch = String(a1Cell.v).match(/(\d{4})年(\d{1,2})月/);
+                    if (yearMonthMatch) {
+                        const year = yearMonthMatch[1];
+                        const month = String(parseInt(yearMonthMatch[2])).padStart(2, '0');
+                        yearMonth = `${year}-${month}`;
+                        console.log(`A1セル（文字列）から年月情報: ${yearMonth}`);
+                    }
+                }
+                
+                // 日付形式（YYYY/M/D など）の場合
+                if (!yearMonth) {
+                    const dateMatch = String(a1Cell.v).match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})?/);
+                    if (dateMatch) {
+                        const year = dateMatch[1];
+                        const month = String(parseInt(dateMatch[2])).padStart(2, '0');
+                        yearMonth = `${year}-${month}`;
+                        console.log(`A1セル（日付形式）から年月情報: ${yearMonth}`);
+                    }
+                }
+                
+                // セルが日付型として認識されている場合
+                if (!yearMonth && a1Cell.t === 'd') {
+                    try {
+                        const dateObj = new Date(a1Cell.v);
+                        if (!isNaN(dateObj.getTime())) {
+                            const year = dateObj.getFullYear();
+                            const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+                            yearMonth = `${year}-${month}`;
+                            console.log(`A1セル（日付型）から年月情報: ${yearMonth}`);
+                        }
+                    } catch (dateError) {
+                        console.warn('A1セルの日付変換エラー:', dateError);
+                    }
+                }
+                
+                console.log(`最終的な年月情報: ${yearMonth}`);
+            } else {
+                console.warn(`シート「${sheetName}」: A1セルが空または無効です`);
+            }
+            
+            if (!yearMonth) {
+                console.warn(`シート「${sheetName}」をスキップします（年月情報なし）`);
+                return;
+            }
+            
+            // B3行から日付を読み取り（複数形式対応）
+            const dateRow = 2; // B3行 (0-indexed で2)
             const dates = [];
             
             for (let col = 1; col < range.e.c + 1; col++) { // B列(1)から開始
-                const cellAddress = XLSX.utils.encode_cell({ r: dateRow - 1, c: col }); // 0-indexed
+                const cellAddress = XLSX.utils.encode_cell({ r: dateRow, c: col });
                 const cell = worksheet[cellAddress];
                 
-                if (cell && cell.v) {
-                    const day = parseInt(cell.v);
-                    if (!isNaN(day) && day >= 1 && day <= 31) {
+                if (cell && (cell.v !== null && cell.v !== undefined)) {
+                    let day = null;
+                    
+                    console.log(`${cellAddress}:`, cell.v, 'タイプ:', typeof cell.v);
+                    
+                    // 数値の場合（日付として）
+                    if (typeof cell.v === 'number') {
+                        // シンプルな数値（1-31）の場合
+                        if (cell.v >= 1 && cell.v <= 31 && Number.isInteger(cell.v)) {
+                            day = cell.v;
+                        }
+                        // Excelのシリアルナンバーの場合
+                        else if (cell.v > 40000) { // Excel日付の範囲
+                            try {
+                                const excelDate = XLSX.SSF.parse_date_code(cell.v);
+                                if (excelDate) {
+                                    day = excelDate.d;
+                                }
+                            } catch (dateParseError) {
+                                console.warn(`${cellAddress}の日付解析エラー:`, dateParseError);
+                            }
+                        }
+                    }
+                    
+                    // 文字列の場合
+                    if (day === null && typeof cell.v === 'string') {
+                        const dayMatch = String(cell.v).match(/^(\d{1,2})/);
+                        if (dayMatch) {
+                            const parsedDay = parseInt(dayMatch[1]);
+                            if (parsedDay >= 1 && parsedDay <= 31) {
+                                day = parsedDay;
+                            }
+                        }
+                    }
+                    
+                    // 有効な日付が見つかった場合
+                    if (day !== null && day >= 1 && day <= 31) {
                         const dayStr = String(day).padStart(2, '0');
                         const fullDate = `${yearMonth}-${dayStr}`;
                         dates.push({ col, day, fullDate });
+                        console.log(`日付発見: ${cellAddress} = ${cell.v} → ${day} → ${fullDate}`);
+                    } else {
+                        console.log(`${cellAddress}: 有効な日付ではありません (${cell.v})`);
                     }
+                } else {
+                    // セルが空の場合は日付列の終了とみなす
+                    console.log(`${cellAddress}: 空のセル - 日付列終了`);
+                    break;
                 }
             }
             
             console.log(`シート「${sheetName}」の日付:`, dates.map(d => d.fullDate));
             
-            // A5行から従業員名を読み取り
-            let employees = [];
-            let currentRow = 5; // A5から開始 (1-indexed)
+            if (dates.length === 0) {
+                console.warn(`シート「${sheetName}」に有効な日付が見つかりません`);
+                return;
+            }
             
-            while (currentRow <= range.e.r + 1) {
-                const cellAddress = XLSX.utils.encode_cell({ r: currentRow - 1, c: 0 }); // A列(0)
+            // A5行から従業員名を読み取り（row=4, 0-indexed）
+            let employees = [];
+            let currentRow = 4; // A5行 (0-indexed で4)
+            
+            while (currentRow <= range.e.r) {
+                const cellAddress = XLSX.utils.encode_cell({ r: currentRow, c: 0 }); // A列(0)
                 const cell = worksheet[cellAddress];
                 
-                if (cell && cell.v) {
+                if (cell && cell.v !== null && cell.v !== undefined) {
                     const cellValue = String(cell.v).trim();
+                    console.log(`${cellAddress}: "${cellValue}"`);
+                    
                     // 「スケジュールなど」が見つかったら終了
                     if (cellValue.includes('スケジュール') || cellValue.includes('予定')) {
                         console.log(`従業員リスト終了マーカー発見: ${cellValue}`);
@@ -263,6 +440,59 @@ function parseShiftExcel(workbook) {
                     }
                     
                     // 空でない値は従業員名として扱う
+                    if (cellValue && cellValue.length > 0) {
+                        employees.push({ name: cellValue, row: currentRow + 1 }); // 1-indexed
+                        console.log(`従業員追加: ${cellValue} (行${currentRow + 1})`);
+                    }
+                }
+                
+                currentRow++;
+            }
+            
+            console.log(`シート「${sheetName}」の従業員:`, employees.map(e => e.name));
+            
+            if (employees.length === 0) {
+                console.warn(`シート「${sheetName}」に従業員が見つかりません`);
+                return;
+            }
+            
+            // 各日付と従業員の組み合わせでYマークをチェック
+            dates.forEach(({ col, fullDate }) => {
+                employees.forEach(({ name, row }) => {
+                    const cellAddress = XLSX.utils.encode_cell({ r: row - 1, c: col }); // 0-indexed
+                    const cell = worksheet[cellAddress];
+                    
+                    if (cell && cell.v !== null && cell.v !== undefined) {
+                        const cellValue = String(cell.v).trim().toUpperCase();
+                        if (cellValue === 'Y') {
+                            if (!parsedData[fullDate]) {
+                                parsedData[fullDate] = [];
+                            }
+                            
+                            parsedData[fullDate].push({
+                                name: name,
+                                shift: 'Y'
+                            });
+                            
+                            console.log(`シフト発見: ${fullDate} - ${name} (${cellAddress})`);
+                        }
+                    }
+                });
+            });
+            
+        } catch (sheetError) {
+            console.error(`シート「${sheetName}」の処理エラー:`, sheetError);
+        }
+    });
+    
+    console.log('全シート解析完了:', parsedData);
+    
+    if (Object.keys(parsedData).length === 0) {
+        throw new Error('有効なシフトデータが見つかりませんでした。\n\n確認事項:\n• A1セルに「YYYY年M月」形式で年月を入力\n• B3行に日付（1,2,3...）を入力\n• A5行から従業員名を入力\n• 該当セルに「Y」マークを入力');
+    }
+    
+    return parsedData;
+}ない値は従業員名として扱う
                     if (cellValue && cellValue.length > 0) {
                         employees.push({ name: cellValue, row: currentRow });
                     }
@@ -316,6 +546,12 @@ async function saveShiftDataToDatabase(shiftData) {
         
         console.log('月別シフトデータ:', monthlyShifts);
         
+        // API_BASE_URLが定義されているかチェック
+        if (typeof API_BASE_URL === 'undefined') {
+            console.warn('API_BASE_URL が定義されていません');
+            return false;
+        }
+        
         // データベースに保存
         const response = await fetch(`${API_BASE_URL}/shifts`, {
             method: 'POST',
@@ -340,9 +576,11 @@ async function saveShiftDataToDatabase(shiftData) {
         console.error('データベース保存エラー:', error);
         
         // APIエラーの場合は警告を表示するが、ローカル処理は続行
-        if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+        if (error.message.includes('fetch') || 
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('NetworkError') ||
+            typeof API_BASE_URL === 'undefined') {
             console.warn('APIサーバーに接続できませんが、ローカルデータは保存されました');
-            showShiftSuccess('シフトデータを読み込みました（ローカル保存のみ）');
             return false;
         } else {
             throw error; // その他のエラーは再スロー
