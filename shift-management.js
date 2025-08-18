@@ -63,36 +63,73 @@ let shiftStatusDiv = null;
 
 // シフト管理機能の初期化
 function initializeShiftManagement() {
-    // カレンダータブが存在するかチェック
-    const calendarTab = document.getElementById('calendar-tab');
-    if (!calendarTab) {
-        console.warn('カレンダータブが見つかりません');
+    // 設定タブが存在するかチェック
+    const settingsTab = document.getElementById('settings-tab');
+    if (!settingsTab) {
+        console.warn('設定タブが見つかりません');
         return;
     }
     
-    // シフト管理UIを作成
-    createShiftUploadInterface();
+    // シフト管理UIを設定タブに設定（HTMLに直接記載されているため、イベントリスナーのみ設定）
+    setupShiftEventListeners();
     
-    // カレンダータブが表示されたときにシフト情報も表示
+    // 設定タブが表示されたときにシフト状態を更新
     const observer = new MutationObserver(function(mutations) {
         mutations.forEach(function(mutation) {
             if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                if (calendarTab.classList.contains('active')) {
+                if (settingsTab.classList.contains('active')) {
                     setTimeout(() => {
-                        // シフト管理UIが存在しない場合は作成
-                        if (!document.getElementById('shift-management-ui')) {
-                            createShiftUploadInterface();
-                        }
-                        
-                        if (typeof renderCalendar === 'function') {
-                            renderCalendar();
-                        }
+                        setupShiftEventListeners();
+                        updateShiftStatus();
                     }, 100);
                 }
             }
         });
     });
-    observer.observe(calendarTab, { attributes: true });
+    observer.observe(settingsTab, { attributes: true });
+}
+
+// シフト管理のイベントリスナーを設定
+function setupShiftEventListeners() {
+    // 要素を取得
+    shiftFileInput = document.getElementById('shift-file-input');
+    shiftUploadBtn = document.getElementById('shift-upload-btn');
+    const shiftClearBtn = document.getElementById('shift-clear-btn');
+    shiftStatusDiv = document.getElementById('shift-status');
+
+    // 既存のイベントリスナーを削除（重複防止）
+    if (shiftUploadBtn) {
+        shiftUploadBtn.replaceWith(shiftUploadBtn.cloneNode(true));
+        shiftUploadBtn = document.getElementById('shift-upload-btn');
+    }
+    
+    if (shiftFileInput) {
+        shiftFileInput.replaceWith(shiftFileInput.cloneNode(true));
+        shiftFileInput = document.getElementById('shift-file-input');
+    }
+
+    // イベントリスナー設定
+    if (shiftUploadBtn) {
+        shiftUploadBtn.addEventListener('click', () => {
+            if (shiftFileInput) {
+                shiftFileInput.click();
+            }
+        });
+    }
+
+    if (shiftFileInput) {
+        shiftFileInput.addEventListener('change', handleShiftFileUpload);
+    }
+
+    if (shiftClearBtn) {
+        shiftClearBtn.replaceWith(shiftClearBtn.cloneNode(true));
+        const newShiftClearBtn = document.getElementById('shift-clear-btn');
+        if (newShiftClearBtn) {
+            newShiftClearBtn.addEventListener('click', clearShiftData);
+        }
+    }
+
+    console.log('シフト管理イベントリスナーを設定しました');
 }
 
 // シフトアップロード用のUIを作成
