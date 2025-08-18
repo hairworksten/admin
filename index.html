@@ -9,6 +9,8 @@
     <link rel="stylesheet" href="components.css">
     <link rel="stylesheet" href="calendar.css">
     <link rel="stylesheet" href="responsive.css">
+    <!-- SheetJS CDN for Excel file handling -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
     <div id="login-screen" class="screen">
@@ -291,7 +293,9 @@
         </div>
     </div>
     
+    <!-- JavaScriptファイルの読み込み順序を調整 -->
     <script src="auth.js"></script>
+    <script src="shift-management.js"></script>
     <script src="main-features.js"></script>
     <script src="calendar.js"></script>
     <script src="modals.js"></script>
