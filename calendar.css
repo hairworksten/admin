@@ -899,3 +899,280 @@
         color: #e0e0e0;
     }
 }
+
+
+/* シフト管理機能のCSS */
+
+/* シフト管理セクション */
+.shift-management-section {
+    background-color: #3a3a3a;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 2px solid #555;
+}
+
+.shift-management-section h3 {
+    color: #ff6b35;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+.shift-upload-form {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 15px;
+    flex-wrap: wrap;
+}
+
+.shift-upload-form .btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+/* シフト状態表示 */
+.shift-status {
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-weight: bold;
+    margin-bottom: 10px;
+    display: none;
+}
+
+.shift-status.success {
+    background-color: rgba(40, 167, 69, 0.2);
+    border: 1px solid #28a745;
+    color: #28a745;
+    display: block;
+}
+
+.shift-status.error {
+    background-color: rgba(220, 53, 69, 0.2);
+    border: 1px solid #dc3545;
+    color: #dc3545;
+    display: block;
+}
+
+.shift-status.info {
+    background-color: rgba(23, 162, 184, 0.2);
+    border: 1px solid #17a2b8;
+    color: #17a2b8;
+    display: block;
+}
+
+.shift-status.loading {
+    background-color: rgba(255, 193, 7, 0.2);
+    border: 1px solid #ffc107;
+    color: #ffc107;
+    display: block;
+}
+
+/* シフトプレビュー */
+.shift-preview {
+    background-color: #4a4a4a;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #555;
+    margin-top: 15px;
+}
+
+.shift-preview h4 {
+    color: #17a2b8;
+    margin-bottom: 12px;
+    font-size: 1.1em;
+}
+
+.shift-preview-item {
+    padding: 8px 0;
+    border-bottom: 1px solid #555;
+    color: #ffffff;
+    font-size: 14px;
+}
+
+.shift-preview-item:last-child {
+    border-bottom: none;
+}
+
+.shift-preview-more {
+    color: #888;
+    font-style: italic;
+    text-align: center;
+    padding: 8px 0;
+    margin-top: 8px;
+}
+
+/* カレンダー日付セルの修正 - シフト情報表示対応 */
+.calendar-day {
+    background-color: #4a4a4a;
+    min-height: 120px;
+    padding: 5px;
+    border: 1px solid #555;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+/* 日付ヘッダー部分のレイアウト修正 */
+.day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 5px;
+    min-height: 20px;
+}
+
+.day-number {
+    font-weight: bold;
+    color: #ffffff;
+    font-size: 14px;
+    flex-shrink: 0;
+    text-align: left;
+}
+
+/* シフト情報表示エリア */
+.day-shift-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    max-width: 50%;
+    overflow: hidden;
+}
+
+.shift-employee {
+    background-color: rgba(23, 162, 184, 0.8);
+    color: #ffffff;
+    font-size: 10px;
+    padding: 2px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+    border: 1px solid #17a2b8;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.shift-employee:hover {
+    background-color: rgba(23, 162, 184, 1);
+    transform: scale(1.02);
+    z-index: 10;
+    position: relative;
+}
+
+/* シフト従業員の種類別色分け（Yマークベース） */
+.shift-employee {
+    background-color: rgba(40, 167, 69, 0.8);
+    border-color: #28a745;
+}
+
+.shift-employee:hover {
+    background-color: rgba(40, 167, 69, 1);
+}
+
+/* シフト情報が複数ある場合の表示調整 */
+.day-shift-info .shift-employee + .shift-employee {
+    margin-top: 1px;
+}
+
+/* シフト情報のツールチップ風表示 */
+.shift-employee[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background-color: #333;
+    color: #fff;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    opacity: 0.9;
+    margin-top: 2px;
+}
+
+/* 予約エリアを調整 */
+.day-reservations {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow-y: auto;
+    margin-top: 3px;
+}
+
+/* 休業日の場合はシフト情報も非表示 */
+.calendar-day.holiday .day-shift-info {
+    display: none;
+}
+
+/* レスポンシブ対応 */
+@media (min-width: 769px) {
+    .calendar-day {
+        min-height: 140px;
+    }
+    
+    .shift-employee {
+        font-size: 11px;
+        padding: 2px 5px;
+    }
+    
+    .day-shift-info {
+        max-width: 45%;
+    }
+}
+
+@media (max-width: 768px) {
+    .shift-management-section {
+        padding: 15px;
+    }
+    
+    .shift-upload-form {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .shift-upload-form .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .calendar-day {
+        min-height: 80px;
+    }
+    
+    .day-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 2px;
+    }
+    
+    .day-shift-info {
+        max-width: 100%;
+        margin-top: 2px;
+    }
+    
+    .shift-employee {
+        font-size: 9px;
+        padding: 1px 3px;
+    }
+    
+    .shift-preview-item {
+        font-size: 13px;
+    }
+}
+
+@media (max-width: 320px) {
+    .shift-employee {
+        font-size: 8px;
+        padding: 1px 2px;
+    }
+    
+    .day-shift-info {
+        gap: 1px;
+    }
+}
