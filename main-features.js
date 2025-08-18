@@ -70,8 +70,10 @@ function initializeMainFeatures() {
     }
 }
 
-// タブ切り替え（修正版 - データ読み込み状態を考慮）
+// タブ切り替え（修正版 - データ読み込み状態を考慮、シフト表示確認を追加）
 function switchTab(tabName) {
+    console.log(`[Main Features] タブ切り替え: ${tabName}`);
+    
     tabBtns.forEach(btn => btn.classList.remove('active'));
     tabContents.forEach(content => content.classList.remove('active'));
 
@@ -83,16 +85,66 @@ function switchTab(tabName) {
         activeContent.classList.add('active');
         
         if (tabName === 'calendar') {
+            console.log('[Main Features] カレンダータブが選択されました');
+            
             // カレンダータブが選択された場合の処理を改善
             // 必要なデータが揃うまで少し待ってからレンダリング
             setTimeout(() => {
-                if (typeof renderCalendar === 'function') {
-                    renderCalendar();
+                // シフトデータの存在確認
+                let hasShiftData = false;
+                try {
+                    hasShiftData = (window.shiftData && Object.keys(window.shiftData).length > 0) ||
+                                  (typeof shiftData !== 'undefined' && shiftData && Object.keys(shiftData).length > 0) ||
+                                  (localStorage.getItem('shiftData') !== null);
+                    
+                    console.log(`[Main Features] シフトデータ存在確認: ${hasShiftData}`);
+                    
+                    if (hasShiftData) {
+                        // シフトデータが存在する場合、詳細をログ出力
+                        if (window.shiftData) {
+                            console.log('[Main Features] window.shiftData:', Object.keys(window.shiftData).slice(0, 3));
+                        }
+                        if (typeof shiftData !== 'undefined' && shiftData) {
+                            console.log('[Main Features] グローバルshiftData:', Object.keys(shiftData).slice(0, 3));
+                        }
+                        
+                        const lsData = localStorage.getItem('shiftData');
+                        if (lsData) {
+                            try {
+                                const parsed = JSON.parse(lsData);
+                                console.log('[Main Features] localStorage shiftData:', Object.keys(parsed).slice(0, 3));
+                            } catch (e) {
+                                console.warn('[Main Features] localStorage shiftData parse error:', e);
+                            }
+                        }
+                    }
+                } catch (e) {
+                    console.warn('[Main Features] シフトデータ確認エラー:', e);
                 }
+                
+                if (typeof renderCalendar === 'function') {
+                    console.log('[Main Features] カレンダー描画実行');
+                    renderCalendar();
+                } else {
+                    console.error('[Main Features] renderCalendar関数が見つかりません');
+                }
+                
                 if (typeof renderMenuLegend === 'function') {
                     renderMenuLegend();
                 }
-            }, 100); // 100ms待機してデータの読み込みを待つ
+            }, 200); // 200ms待機してデータの読み込みを待つ
+        }
+        
+        if (tabName === 'settings') {
+            console.log('[Main Features] 設定タブが選択されました');
+            
+            // シフト管理機能の初期化確認
+            setTimeout(() => {
+                if (typeof window.initializeShiftManagement === 'function' && !window.shiftManagementInitialized) {
+                    console.log('[Main Features] シフト管理機能の遅延初期化実行');
+                    window.initializeShiftManagement();
+                }
+            }, 100);
         }
     }
 }
