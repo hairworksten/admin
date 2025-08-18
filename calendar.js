@@ -48,9 +48,69 @@ function getMenuColorSafe(menuName) {
     return '#ff6b35'; // オレンジ色をデフォルトとする
 }
 
-// カレンダー描画（シフト情報表示対応版）
+// シフトデータ取得関数の修正版（複数のソースから取得を試行）
+function getShiftForDateFixed(dateString) {
+    try {
+        // デバッグログ出力
+        console.log(`[カレンダー] シフト取得開始: ${dateString}`);
+        
+        // 1. window.getShiftForDate が定義されている場合はそれを使用
+        if (typeof window.getShiftForDate === 'function') {
+            const result1 = window.getShiftForDate(dateString);
+            console.log(`[カレンダー] window.getShiftForDate結果:`, result1);
+            if (result1 && result1.length > 0) {
+                return result1;
+            }
+        }
+        
+        // 2. window.shiftData から直接取得
+        if (typeof window !== 'undefined' && window.shiftData && typeof window.shiftData === 'object') {
+            const result2 = window.shiftData[dateString] || [];
+            console.log(`[カレンダー] window.shiftData結果:`, result2);
+            if (result2 && result2.length > 0) {
+                return result2;
+            }
+        }
+        
+        // 3. グローバルのshiftDataから取得
+        if (typeof shiftData !== 'undefined' && shiftData && typeof shiftData === 'object') {
+            const result3 = shiftData[dateString] || [];
+            console.log(`[カレンダー] グローバルshiftData結果:`, result3);
+            if (result3 && result3.length > 0) {
+                return result3;
+            }
+        }
+        
+        // 4. ローカルストレージから取得を試行
+        try {
+            const savedShiftData = localStorage.getItem('shiftData');
+            if (savedShiftData) {
+                const parsedShiftData = JSON.parse(savedShiftData);
+                if (parsedShiftData && parsedShiftData[dateString]) {
+                    const result4 = parsedShiftData[dateString];
+                    console.log(`[カレンダー] localStorage結果:`, result4);
+                    return result4;
+                }
+            }
+        } catch (storageError) {
+            console.warn('ローカルストレージからのシフトデータ取得エラー:', storageError);
+        }
+        
+        // 5. すべて失敗した場合は空配列を返す
+        console.log(`[カレンダー] ${dateString}のシフトデータなし`);
+        return [];
+        
+    } catch (error) {
+        console.error('シフトデータ取得エラー:', error);
+        return [];
+    }
+}
+
+// カレンダー描画（シフト情報表示対応版）- 修正版
 function renderCalendar() {
     if (!calendarGrid) return;
+    
+    console.log('[カレンダー] renderCalendar() 開始');
     
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -79,6 +139,25 @@ function renderCalendar() {
         calendarGrid.appendChild(dayHeader);
     });
     
+    // シフトデータの存在確認
+    let hasShiftData = false;
+    try {
+        hasShiftData = (window.shiftData && Object.keys(window.shiftData).length > 0) ||
+                      (typeof shiftData !== 'undefined' && shiftData && Object.keys(shiftData).length > 0) ||
+                      (localStorage.getItem('shiftData') !== null);
+        console.log(`[カレンダー] シフトデータ存在確認: ${hasShiftData}`);
+        
+        // デバッグ用：利用可能なシフトデータを確認
+        if (window.shiftData) {
+            console.log('[カレンダー] window.shiftData:', Object.keys(window.shiftData).slice(0, 5));
+        }
+        if (typeof shiftData !== 'undefined' && shiftData) {
+            console.log('[カレンダー] グローバルshiftData:', Object.keys(shiftData).slice(0, 5));
+        }
+    } catch (e) {
+        console.warn('[カレンダー] シフトデータ確認エラー:', e);
+    }
+    
     // カレンダー日付生成
     const currentDateObj = new Date(startDate);
     for (let i = 0; i < 42; i++) {
@@ -88,6 +167,8 @@ function renderCalendar() {
         // 修正：タイムゾーンを考慮した日付文字列生成
         const dateString = formatDateToLocal(currentDateObj);
         const dayNumber = currentDateObj.getDate();
+        
+        console.log(`[カレンダー] 日付処理: ${dateString}`);
         
         if (currentDateObj.getMonth() !== month) {
             dayElement.classList.add('other-month');
@@ -122,19 +203,31 @@ function renderCalendar() {
             const shiftInfoElement = document.createElement('div');
             shiftInfoElement.className = 'day-shift-info';
             
-            // シフトデータを取得
-            const shiftEmployees = getShiftForDate ? getShiftForDate(dateString) : [];
+            // 修正：シフトデータを取得（複数の方法で試行）
+            let shiftEmployees = [];
             
-            shiftEmployees.forEach(employee => {
-                const employeeElement = document.createElement('div');
-                employeeElement.className = 'shift-employee';
-                
-                // 表示テキスト（従業員名のみ）
-                employeeElement.textContent = employee.name;
-                employeeElement.title = `担当: ${employee.name}`; // ツールチップ
-                
-                shiftInfoElement.appendChild(employeeElement);
-            });
+            if (hasShiftData) {
+                shiftEmployees = getShiftForDateFixed(dateString);
+                console.log(`[カレンダー] ${dateString}のシフト従業員:`, shiftEmployees);
+            }
+            
+            // シフト情報が存在する場合のみ表示
+            if (shiftEmployees && shiftEmployees.length > 0) {
+                shiftEmployees.forEach(employee => {
+                    const employeeElement = document.createElement('div');
+                    employeeElement.className = 'shift-employee';
+                    
+                    // 表示テキスト（従業員名のみ）
+                    const employeeName = employee.name || employee;
+                    employeeElement.textContent = employeeName;
+                    employeeElement.title = `担当: ${employeeName}`; // ツールチップ
+                    
+                    console.log(`[カレンダー] シフト従業員追加: ${employeeName}`);
+                    shiftInfoElement.appendChild(employeeElement);
+                });
+            } else {
+                console.log(`[カレンダー] ${dateString}: シフト従業員なし`);
+            }
             
             dayHeader.appendChild(shiftInfoElement);
         }
@@ -179,42 +272,10 @@ function renderCalendar() {
         currentDateObj.setDate(currentDateObj.getDate() + 1);
     }
     
+    console.log('[カレンダー] カレンダー描画完了');
+    
     // カレンダー描画後にメニュー凡例も更新
     renderMenuLegend();
-}
-
-// シフト情報取得関数のフォールバック
-function getShiftForDate(dateString) {
-    try {
-        // window.getShiftForDate が定義されている場合はそれを使用
-        if (typeof window.getShiftForDate === 'function') {
-            return window.getShiftForDate(dateString);
-        }
-        
-        // フォールバック：グローバルのshiftDataから取得
-        if (typeof shiftData !== 'undefined' && shiftData && shiftData[dateString]) {
-            return shiftData[dateString];
-        }
-        
-        // ローカルストレージから取得を試行
-        try {
-            const savedShiftData = localStorage.getItem('shiftData');
-            if (savedShiftData) {
-                const parsedShiftData = JSON.parse(savedShiftData);
-                if (parsedShiftData && parsedShiftData[dateString]) {
-                    return parsedShiftData[dateString];
-                }
-            }
-        } catch (storageError) {
-            console.warn('ローカルストレージからのシフトデータ取得エラー:', storageError);
-        }
-        
-        // データがない場合は空配列を返す
-        return [];
-    } catch (error) {
-        console.error('シフトデータ取得エラー:', error);
-        return [];
-    }
 }
 
 // メニュー凡例描画（修正版 - メニューデータの読み込み状態を考慮）
