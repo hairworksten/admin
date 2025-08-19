@@ -204,7 +204,44 @@ async function loadInitialData() {
             // 少し遅延を入れてデータが確実に読み込まれてから描画
             setTimeout(() => {
                 if (typeof renderCalendar === 'function') {
-                    console.log('[Auth] ローカルストレージからシフトデータを読み込み:', Object.keys(parsedShiftData).length, '日分');
+                    console.log('[Auth] カレンダー再描画実行');
+                    renderCalendar();
+                }
+                if (typeof renderMenuLegend === 'function') {
+                    renderMenuLegend();
+                }
+            }, 200);
+        }
+        
+        console.log('[Auth] 初期データ読み込み完了');
+        
+    } catch (error) {
+        console.error('[Auth] 初期データ読み込みエラー:', error);
+    }
+}
+
+// シフトデータの確認と読み込み - 新規追加
+async function checkAndLoadShiftData() {
+    try {
+        console.log('[Auth] シフトデータ確認開始');
+        
+        // ローカルストレージからシフトデータを確認
+        const savedShiftData = localStorage.getItem('shiftData');
+        if (savedShiftData) {
+            try {
+                const parsedShiftData = JSON.parse(savedShiftData);
+                
+                // グローバル変数に設定
+                if (typeof window !== 'undefined') {
+                    window.shiftData = parsedShiftData;
+                }
+                
+                // shift-management.js のグローバル変数にも設定
+                if (typeof shiftData !== 'undefined') {
+                    shiftData = parsedShiftData;
+                }
+                
+                console.log('[Auth] ローカルストレージからシフトデータを読み込み:', Object.keys(parsedShiftData).length, '日分');
                 
                 // シフト管理機能が初期化されていない場合は初期化を促す
                 if (typeof window.initializeShiftManagement === 'function' && !window.shiftManagementInitialized) {
@@ -649,41 +686,4 @@ async function loadNotices() {
         console.error('Error loading notices:', error);
         notices = [];
     }
-}Auth] カレンダー再描画実行');
-                    renderCalendar();
-                }
-                if (typeof renderMenuLegend === 'function') {
-                    renderMenuLegend();
-                }
-            }, 200);
-        }
-        
-        console.log('[Auth] 初期データ読み込み完了');
-        
-    } catch (error) {
-        console.error('[Auth] 初期データ読み込みエラー:', error);
-    }
 }
-
-// シフトデータの確認と読み込み - 新規追加
-async function checkAndLoadShiftData() {
-    try {
-        console.log('[Auth] シフトデータ確認開始');
-        
-        // ローカルストレージからシフトデータを確認
-        const savedShiftData = localStorage.getItem('shiftData');
-        if (savedShiftData) {
-            try {
-                const parsedShiftData = JSON.parse(savedShiftData);
-                
-                // グローバル変数に設定
-                if (typeof window !== 'undefined') {
-                    window.shiftData = parsedShiftData;
-                }
-                
-                // shift-management.js のグローバル変数にも設定
-                if (typeof shiftData !== 'undefined') {
-                    shiftData = parsedShiftData;
-                }
-                
-                console.log('[
