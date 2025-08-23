@@ -602,9 +602,12 @@ function attachMenuEventListeners() {
     });
 }
 
-// メニュー編集
+// ↓ 新しいバージョンに置き換え
 function editMenu(name, text, worktime, fare) {
-    if (menuNameInput) menuNameInput.value = name;
+    if (menuNameInput) {
+        menuNameInput.value = name;
+        menuNameInput.readOnly = false; // この行を追加
+    }
     if (menuTextInput) menuTextInput.value = text;
     if (menuWorktimeInput) menuWorktimeInput.value = worktime;
     if (menuFareInput) menuFareInput.value = fare;
@@ -648,36 +651,91 @@ async function handleAddMenu() {
     }
 }
 
-// メニュー更新
+// ↓ 新しいバージョンに置き換え
 async function handleUpdateMenu(originalName) {
+    const newName = menuNameInput ? menuNameInput.value.trim() : '';
     const text = menuTextInput ? menuTextInput.value.trim() : '';
     const worktime = menuWorktimeInput ? parseInt(menuWorktimeInput.value) : 0;
     const fare = menuFareInput ? parseInt(menuFareInput.value) : 0;
 
-    if (!text || !worktime || !fare) {
-        alert('説明、作業時間、料金を入力してください。');
+    if (!newName || !text || !worktime || !fare) {
+        alert('すべての項目を入力してください。');
         return;
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}/menus/${encodeURIComponent(originalName)}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, worktime, fare })
-        });
+        // メニュー名が変更された場合
+        if (newName !== originalName) {
+            // 新しい名前で存在チェック
+            if (currentMenus[newName]) {
+                alert('この名前のメニューは既に存在します。別の名前を入力してください。');
+                return;
+            }
 
-        if (response.ok) {
-            resetMenuForm();
-            await loadMenus();
+            // 古いメニューを削除してから新しいメニューを追加
+            await deleteMenuFromServer(originalName);
+            await addMenuToServer(newName, text, worktime, fare);
+        } else {
+            // メニュー名が同じ場合は通常の更新
+            await updateMenuOnServer(originalName, text, worktime, fare);
         }
+
+        resetMenuForm();
+        await loadMenus();
+        
+        const calendarTab = document.getElementById('calendar-tab');
+        if (calendarTab && calendarTab.classList.contains('active') && typeof renderMenuLegend === 'function') {
+            renderMenuLegend();
+        }
+
     } catch (error) {
         console.error('Error updating menu:', error);
+        alert('メニューの更新に失敗しました。');
     }
 }
 
-// メニューフォームリセット
+// メニューをサーバーから削除（内部関数）
+async function deleteMenuFromServer(name) {
+    const response = await fetch(`${API_BASE_URL}/menus/${encodeURIComponent(name)}`, {
+        method: 'DELETE'
+    });
+    
+    if (!response.ok) {
+        throw new Error(`メニュー削除に失敗: ${response.status}`);
+    }
+}
+
+// メニューをサーバーに追加（内部関数）
+async function addMenuToServer(name, text, worktime, fare) {
+    const response = await fetch(`${API_BASE_URL}/menus`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, text, worktime, fare })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`メニュー追加に失敗: ${response.status}`);
+    }
+}
+
+// メニューをサーバーで更新（内部関数）
+async function updateMenuOnServer(name, text, worktime, fare) {
+    const response = await fetch(`${API_BASE_URL}/menus/${encodeURIComponent(name)}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text, worktime, fare })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`メニュー更新に失敗: ${response.status}`);
+    }
+}
+
 function resetMenuForm() {
-    if (menuNameInput) menuNameInput.value = '';
+    if (menuNameInput) {
+        menuNameInput.value = '';
+        menuNameInput.readOnly = false;
+    }
     if (menuTextInput) menuTextInput.value = '';
     if (menuWorktimeInput) menuWorktimeInput.value = '';
     if (menuFareInput) menuFareInput.value = '';
@@ -686,7 +744,6 @@ function resetMenuForm() {
         addMenuBtn.onclick = handleAddMenu;
     }
 }
-
 // メニュー削除
 async function handleDeleteMenu(name) {
     showConfirm('メニュー削除', 'このメニューを削除しますか？', async () => {
