@@ -162,13 +162,15 @@ function displayReservations() {
             `;
         }
     } else {
-        // 通常営業時の予約表示
+        // 通常営業時の予約表示（休止時間除外版）
         const today = new Date().toISOString().split('T')[0];
         
-        // reservations配列が存在することを確認
+        // reservations配列が存在することを確認し、休止時間を除外
         const todayReservations = (reservations && Array.isArray(reservations)) ? 
             reservations.filter(r => 
-                r.date >= today && r.states === 0
+                r.date >= today && 
+                r.states === 0 && 
+                r['Name-f'] !== '休止時間' // 休止時間を除外
             ).sort((a, b) => {
                 if (a.date === b.date) {
                     return a.Time.localeCompare(b.Time);
@@ -181,7 +183,7 @@ function displayReservations() {
         }
     }
 
-    // 履歴は常に表示
+    // 履歴も休止時間を除外
     const historyReservations = getFilteredReservations();
     if (reservationHistoryDiv) {
         reservationHistoryDiv.innerHTML = renderReservationsList(historyReservations, 'history');
