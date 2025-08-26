@@ -149,7 +149,7 @@ function switchTab(tabName) {
     }
 }
 
-// 予約表示（休憩モード対応版）
+// 予約表示（休憩モード対応版、休止時間除外版）
 function displayReservations() {
     // 休憩モード時は今日の予約表示を修正
     if (breakMode && breakMode.turn) {
@@ -183,21 +183,22 @@ function displayReservations() {
         }
     }
 
-    // 履歴も休止時間を除外
+    // 履歴は休止時間を除外
     const historyReservations = getFilteredReservations();
     if (reservationHistoryDiv) {
         reservationHistoryDiv.innerHTML = renderReservationsList(historyReservations, 'history');
     }
 }
 
-// 検索フィルター適用（修正版 - 安全性向上）
+// 検索フィルター適用（休止時間除外版）
 function getFilteredReservations() {
     // reservations配列が存在することを確認
     if (!reservations || !Array.isArray(reservations)) {
         return [];
     }
     
-    let filteredReservations = [...reservations];
+    // 休止時間を除外してフィルタリング（最初に除外）
+    let filteredReservations = reservations.filter(r => r['Name-f'] !== '休止時間');
     
     const searchText = searchTextInput ? searchTextInput.value.trim().toLowerCase() : '';
     if (searchText) {
