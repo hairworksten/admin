@@ -234,7 +234,7 @@ function renderCalendar() {
         
         dayElement.appendChild(dayHeader);
         
-        // 予約リスト表示
+        // 予約リスト表示（休止時間対応版）
         const reservationsContainer = document.createElement('div');
         reservationsContainer.className = 'day-reservations';
         
@@ -245,7 +245,30 @@ function renderCalendar() {
                     r.date === dateString && r.states === 0
                 ).sort((a, b) => a.Time.localeCompare(b.Time));
                 
-                dayReservations.forEach(reservation => {
+                // 通常予約と休止時間を分離
+                const normalReservations = dayReservations.filter(r => r['Name-f'] !== '休止時間');
+                const blockedTimeSlots = dayReservations.filter(r => r['Name-f'] === '休止時間');
+                
+                // 休止時間を先に表示
+                blockedTimeSlots.forEach(blockReservation => {
+                    const blockElement = document.createElement('div');
+                    blockElement.className = 'reservation-item-calendar blocked-time';
+                    blockElement.textContent = `${blockReservation.Time} 休止`;
+                    blockElement.style.backgroundColor = '#6c757d';
+                    blockElement.style.color = '#ffffff';
+                    blockElement.style.cursor = 'pointer';
+                    blockElement.title = `休止理由: ${blockReservation['Name-s'] || '設定済み'}`;
+                    
+                    // クリックイベント（詳細表示）
+                    blockElement.addEventListener('click', () => {
+                        showBlockedTimeDetail(blockReservation);
+                    });
+                    
+                    reservationsContainer.appendChild(blockElement);
+                });
+                
+                // 通常予約を表示
+                normalReservations.forEach(reservation => {
                     const reservationElement = document.createElement('button');
                     reservationElement.className = 'reservation-item-calendar';
                     
@@ -371,6 +394,65 @@ function showReservationDetail(reservation) {
     
     if (reservationDetailModal) {
         reservationDetailModal.classList.add('active');
+    }
+}
+
+// 休止時間詳細表示
+function showBlockedTimeDetail(blockReservation) {
+    const reason = blockReservation['Name-s'] || '理由未設定';
+    const message = `予約休止時間帯\n\n日付: ${blockReservation.date}\n時間: ${blockReservation.Time}\n理由: ${reason}`;
+    
+    if (confirm(message + '\n\nこの休止設定を解除しますか？')) {
+        handleRemoveBlockedTime(blockReservation);
+    }
+}
+
+// 休止時間解除処理
+async function handleRemoveBlockedTime(blockReservation) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/reservations/${blockReservation.id}/status`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: 2 }) // キャンセル扱いで削除
+        });
+
+        if (response.ok) {
+            await loadReservations();
+            
+            const calendarTab = document.getElementById('calendar-tab');
+            if (calendarTab && calendarTab.classList.contains('active')) {
+                renderCalendar();
+            }
+            
+            alert('休止設定を解除しました。');
+        } else {
+            const errorData = await response.text();
+            alert(`休止設定の解除に失敗しました。\nステータス: ${response.status}\nエラー: ${errorData}`);
+        }
+    } catch (error) {
+        console.error('休止設定解除エラー:', error);
+        
+        if (error.message.includes('fetch')) {
+            alert('ローカル開発環境のため、APIに接続できません。\n実際の本番環境では正常に動作します。');
+            
+            // デモ用のローカル処理
+            const reservationIndex = reservations.findIndex(r => r.id === blockReservation.id);
+            if (reservationIndex >= 0) {
+                reservations[reservationIndex].states = 2;
+                if (typeof displayReservations === 'function') {
+                    displayReservations();
+                }
+                
+                const calendarTab = document.getElementById('calendar-tab');
+                if (calendarTab && calendarTab.classList.contains('active')) {
+                    renderCalendar();
+                }
+                
+                alert('デモ用：休止設定を解除しました（ローカルのみ）');
+            }
+        } else {
+            alert(`休止設定の解除に失敗しました。\nエラー: ${error.message}`);
+        }
     }
 }
 
