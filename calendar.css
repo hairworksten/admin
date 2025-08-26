@@ -1,3 +1,103 @@
+/* 予約休止時間表示 */
+.reservation-item-calendar.blocked-time {
+    background-color: #6c757d !important;
+    color: #ffffff !important;
+    border: 2px solid #5a6268;
+    opacity: 0.8;
+    font-weight: bold;
+}
+
+.reservation-item-calendar.blocked-time:hover {
+    background-color: #5a6268 !important;
+    opacity: 1;
+    transform: scale(1.02);
+}
+
+/* 予約受付管理セクション */
+.block-reservation-container {
+    background-color: #4a4a4a;
+    padding: 20px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    border: 2px solid #555;
+}
+
+.block-reservation-form {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.block-reservation-form p {
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* 休止時間選択用のスタイル */
+.time-slot-btn.block-time-slot {
+    background-color: #4a4a4a;
+    color: #ffffff;
+    border: 2px solid #555;
+    border-radius: 6px;
+    padding: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    text-align: center;
+}
+
+.time-slot-btn.block-time-slot:hover {
+    background-color: #525252;
+    border-color: #ffc107;
+}
+
+.time-slot-btn.block-time-slot.selected {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #000000 !important;
+    font-weight: bold;
+}
+
+.time-slot-btn.block-time-slot.disabled {
+    background-color: #333;
+    color: #666;
+    cursor: not-allowed;
+    border-color: #333;
+}
+
+.time-slot-btn.block-time-slot.disabled:hover {
+    background-color: #333;
+    border-color: #333;
+}
+
+/* 選択された時間表示エリア */
+.selected-block-times {
+    margin-top: 15px;
+    padding: 12px;
+    background-color: #4a4a4a;
+    border: 2px solid #ffc107;
+    border-radius: 8px;
+    min-height: 50px;
+}
+
+/* 休止理由入力 */
+#block-reason {
+    padding: 12px;
+    border: 2px solid #555;
+    border-radius: 8px;
+    background-color: #4a4a4a;
+    color: #ffffff;
+    font-size: 16px;
+    width: 100%;
+}
+
+#block-reason:focus {
+    outline: none;
+    border-color: #ffc107;
+    background-color: #525252;
+}
+
+/* 人数コントロール */
 /* 人数コントロール */
 .population-control {
     display: flex;
