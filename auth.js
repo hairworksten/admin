@@ -305,53 +305,6 @@ function updateUIAfterReload() {
     }
 }
 
-// 手動更新ボタンを追加
-function addManualRefreshButton() {
-    const navbar = document.querySelector('.navbar .nav-buttons');
-    if (navbar && !document.getElementById('manual-refresh-btn')) {
-        const refreshBtn = document.createElement('button');
-        refreshBtn.id = 'manual-refresh-btn';
-        refreshBtn.className = 'btn btn-secondary';
-        refreshBtn.innerHTML = '🔄 更新';
-        refreshBtn.style.marginRight = '10px';
-        refreshBtn.title = '最新のデータを取得します';
-        
-        refreshBtn.addEventListener('click', async function() {
-            this.disabled = true;
-            this.textContent = '更新中...';
-            
-            try {
-                await Promise.all([
-                    loadReservations(),
-                    loadBreakMode(),
-                    loadPopulation(),
-                    loadMenus(),
-                    loadNotices()
-                ]);
-                
-                updateUIAfterReload();
-                
-                // 成功表示
-                this.textContent = '✓ 完了';
-                setTimeout(() => {
-                    this.innerHTML = '🔄 更新';
-                    this.disabled = false;
-                }, 2000);
-                
-            } catch (error) {
-                console.error('手動更新エラー:', error);
-                this.textContent = '⚠ エラー';
-                setTimeout(() => {
-                    this.innerHTML = '🔄 更新';
-                    this.disabled = false;
-                }, 2000);
-            }
-        });
-        
-        navbar.insertBefore(refreshBtn, navbar.firstChild);
-        console.log('[Auth] 手動更新ボタンを追加');
-    }
-}
 
 // ページの可視性変更に対応
 document.addEventListener('visibilitychange', function() {
