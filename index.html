@@ -48,6 +48,86 @@
 
             <div id="home-tab" class="tab-content active">
                 <div class="section">
+                    <h2>サイネージの更新</h2>
+                    <!-- この部分は JavaScript の updateSignageDisplay() で動的に更新されます -->
+                    <div class="population-control">
+                        <div class="population-display">
+                            <span>現在の待ち人数: </span>
+                            <span id="current-population">0</span>
+                        </div>
+                        <div class="population-buttons">
+                            <button id="population-minus" class="btn btn-primary">-</button>
+                            <button id="population-plus" class="btn btn-primary">+</button>
+                        </div>
+                        <div class="break-control-inline">
+                            <button id="start-break-btn" class="btn btn-secondary">休憩開始</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>予約一覧（来店前）</h2>
+                    <div id="today-reservations" class="reservations-list"></div>
+                </div>
+            </div>
+
+            <div id="calendar-tab" class="tab-content">
+                <div class="section">
+                    <h2>予約カレンダー</h2>
+                    <div class="calendar-controls">
+                        <div class="calendar-nav-section">
+                            <button id="prev-month-btn" class="btn btn-secondary">前月</button>
+                            <span id="current-month-year" class="month-year"></span>
+                            <button id="next-month-btn" class="btn btn-secondary">次月</button>
+                        </div>
+                        <div class="calendar-action-section">
+                            <button id="add-reservation-btn" class="add-reservation-btn">
+                                <span>📅</span>
+                                <span>予約追加</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="calendar-container" class="calendar-container">
+                        <div id="calendar-grid" class="calendar-grid"></div>
+                    </div>
+                    <div id="menu-legend" class="menu-legend"></div>
+                </div>
+            </div>
+
+            <div id="reservations-tab" class="tab-content">
+                <div class="section">
+                    <h2>予約履歴</h2>
+                    <div class="search-container">
+                        <div class="search-form">
+                            <input type="text" id="search-text" placeholder="名前、電話番号、メニュー、メールアドレスで検索">
+                            <div class="date-range-container">
+                                <input type="date" id="search-date-from" placeholder="開始日">
+                                <span>～</span>
+                                <input type="date" id="search-date-to" placeholder="終了日">
+                            </div>
+                            <button id="search-btn" class="btn btn-primary">検索</button>
+                            <button id="clear-search-btn" class="btn btn-secondary">クリア</button>
+                        </div>
+                    </div>
+                    <div id="reservation-history" class="reservations-list"></div>
+                </div>
+            </div>
+
+            <div id="settings-tab" class="tab-content">
+                <div class="section">
+                    <h2>予約受付管理</h2>
+                    <div class="block-reservation-container">
+                        <div class="block-reservation-form">
+                            <p style="color: #ffffff; margin-bottom: 15px;">
+                                特定の日時の予約受付を停止できます。
+                            </p>
+                            <button id="add-block-btn" class="btn btn-primary">休止日時を追加</button>
+                        </div>
+                        <div id="block-message" class="message"></div>
+                    </div>
+                </div>
+
+                <div class="section">
                     <h2>シフト表管理</h2>
                     <div class="shift-upload-container">
                         <div class="shift-upload-form">
@@ -342,87 +422,8 @@
     <script src="add-reservation.js"></script>
     <script src="reservation-blocking.js"></script>
     
-    <!-- リアルタイム更新機能（最後に読み込み） -->
+    <!-- リアルタイム更新機能 -->
+    <script src="firestore-listener.js"></script>
     <script src="real-time-updates.js"></script>
 </body>
-</html>section">
-                    <h2>サイネージの更新</h2>
-                    <!-- この部分は JavaScript の updateSignageDisplay() で動的に更新されます -->
-                    <div class="population-control">
-                        <div class="population-display">
-                            <span>現在の待ち人数: </span>
-                            <span id="current-population">0</span>
-                        </div>
-                        <div class="population-buttons">
-                            <button id="population-minus" class="btn btn-primary">-</button>
-                            <button id="population-plus" class="btn btn-primary">+</button>
-                        </div>
-                        <div class="break-control-inline">
-                            <button id="start-break-btn" class="btn btn-secondary">休憩開始</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="section">
-                    <h2>予約一覧（来店前）</h2>
-                    <div id="today-reservations" class="reservations-list"></div>
-                </div>
-            </div>
-
-            <div id="calendar-tab" class="tab-content">
-                <div class="section">
-                    <h2>予約カレンダー</h2>
-                    <div class="calendar-controls">
-                        <div class="calendar-nav-section">
-                            <button id="prev-month-btn" class="btn btn-secondary">前月</button>
-                            <span id="current-month-year" class="month-year"></span>
-                            <button id="next-month-btn" class="btn btn-secondary">次月</button>
-                        </div>
-                        <div class="calendar-action-section">
-                            <button id="add-reservation-btn" class="add-reservation-btn">
-                                <span>📅</span>
-                                <span>予約追加</span>
-                            </button>
-                        </div>
-                    </div>
-                    <div id="calendar-container" class="calendar-container">
-                        <div id="calendar-grid" class="calendar-grid"></div>
-                    </div>
-                    <div id="menu-legend" class="menu-legend"></div>
-                </div>
-            </div>
-
-            <div id="reservations-tab" class="tab-content">
-                <div class="section">
-                    <h2>予約履歴</h2>
-                    <div class="search-container">
-                        <div class="search-form">
-                            <input type="text" id="search-text" placeholder="名前、電話番号、メニュー、メールアドレスで検索">
-                            <div class="date-range-container">
-                                <input type="date" id="search-date-from" placeholder="開始日">
-                                <span>～</span>
-                                <input type="date" id="search-date-to" placeholder="終了日">
-                            </div>
-                            <button id="search-btn" class="btn btn-primary">検索</button>
-                            <button id="clear-search-btn" class="btn btn-secondary">クリア</button>
-                        </div>
-                    </div>
-                    <div id="reservation-history" class="reservations-list"></div>
-                </div>
-            </div>
-
-            <div id="settings-tab" class="tab-content">
-                <div class="section">
-                    <h2>予約受付管理</h2>
-                    <div class="block-reservation-container">
-                        <div class="block-reservation-form">
-                            <p style="color: #ffffff; margin-bottom: 15px;">
-                                特定の日時の予約受付を停止できます。
-                            </p>
-                            <button id="add-block-btn" class="btn btn-primary">休止日時を追加</button>
-                        </div>
-                        <div id="block-message" class="message"></div>
-                    </div>
-                </div>
-
-                <div class="
+</html>
