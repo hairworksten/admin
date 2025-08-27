@@ -29,8 +29,12 @@ let currentTemplates = {};
 let currentDate = new Date();
 let currentReservationDetail = null;
 let holidays = [];
-let notices = []; // 重要なお知らせ用グローバル変数を追加
-let breakMode = { turn: false, custom: '' }; // 休憩モード設定用グローバル変数を追加
+let notices = [];
+let breakMode = { turn: false, custom: '' };
+
+// 自動再読み込み機能
+let autoReloadInterval = null;
+const AUTO_RELOAD_INTERVAL = 60000; // 1分間隔（60秒）
 
 // DOM要素の取得
 const loginScreen = document.getElementById('login-screen');
@@ -152,18 +156,36 @@ function hideError() {
     }
 }
 
-// ログアウト処理
+// ログアウト処理（修正版 - 自動再読み込み停止機能追加）
 function handleLogout() {
+    // 自動再読み込みを停止
+    stopAutoReload();
+    
+    // リアルタイム更新も停止
+    if (typeof stopRealtimeUpdates === 'function') {
+        stopRealtimeUpdates();
+    }
+    
     currentUser = null;
     localStorage.removeItem('currentUser');
     showLoginScreen();
 }
 
-// メイン画面表示
+// メイン画面表示（修正版 - 手動更新ボタンとリアルタイム機能追加）
 function showMainScreen() {
     loginScreen.classList.add('hidden');
     mainScreen.classList.remove('hidden');
+    
+    // データ読み込み開始
     loadInitialData();
+    
+    // 手動更新ボタンを追加
+    addManualRefreshButton();
+    
+    // リアルタイム更新も開始
+    if (typeof startRealtimeUpdates === 'function') {
+        startRealtimeUpdates();
+    }
 }
 
 // ログイン画面表示
@@ -175,7 +197,7 @@ function showLoginScreen() {
     hideError();
 }
 
-// 初期データ読み込み（修正版 - 順序を最適化、シフトデータ確認を追加）
+// 初期データ読み込み（修正版 - 自動再読み込み機能追加）
 async function loadInitialData() {
     try {
         console.log('[Auth] 初期データ読み込み開始');
@@ -185,7 +207,7 @@ async function loadInitialData() {
             loadBreakMode(),
             loadPopulation(),
             loadHolidays(),
-            loadMenus(), // メニューを早めに読み込み
+            loadMenus(),
             loadNotices()
         ]);
         
@@ -201,7 +223,6 @@ async function loadInitialData() {
         // 5. 全データ読み込み完了後にカレンダーが表示されている場合は再描画
         const calendarTab = document.getElementById('calendar-tab');
         if (calendarTab && calendarTab.classList.contains('active')) {
-            // 少し遅延を入れてデータが確実に読み込まれてから描画
             setTimeout(() => {
                 if (typeof renderCalendar === 'function') {
                     console.log('[Auth] カレンダー再描画実行');
@@ -213,6 +234,9 @@ async function loadInitialData() {
             }, 200);
         }
         
+        // 6. 自動再読み込み機能を開始
+        startAutoReload();
+        
         console.log('[Auth] 初期データ読み込み完了');
         
     } catch (error) {
@@ -220,7 +244,143 @@ async function loadInitialData() {
     }
 }
 
-// シフトデータの確認と読み込み - 新規追加
+// 自動再読み込み開始
+function startAutoReload() {
+    // 既存のインターバルがある場合はクリア
+    if (autoReloadInterval) {
+        clearInterval(autoReloadInterval);
+    }
+    
+    console.log('[Auth] 自動再読み込み開始 (1分間隔)');
+    
+    autoReloadInterval = setInterval(async () => {
+        try {
+            console.log('[Auth] 定期的なデータ更新実行');
+            
+            // 重要なデータのみを再読み込み
+            await Promise.all([
+                loadReservations(),
+                loadBreakMode(),
+                loadPopulation()
+            ]);
+            
+            // UI更新
+            updateUIAfterReload();
+            
+        } catch (error) {
+            console.error('[Auth] 自動再読み込みエラー:', error);
+        }
+    }, AUTO_RELOAD_INTERVAL);
+}
+
+// 自動再読み込み停止
+function stopAutoReload() {
+    if (autoReloadInterval) {
+        clearInterval(autoReloadInterval);
+        autoReloadInterval = null;
+        console.log('[Auth] 自動再読み込み停止');
+    }
+}
+
+// UI更新処理
+function updateUIAfterReload() {
+    console.log('[Auth] UI更新開始');
+    
+    // 予約表示を更新
+    if (typeof displayReservations === 'function') {
+        displayReservations();
+    }
+    
+    // カレンダーが表示されている場合は更新
+    const calendarTab = document.getElementById('calendar-tab');
+    if (calendarTab && calendarTab.classList.contains('active')) {
+        if (typeof renderCalendar === 'function') {
+            renderCalendar();
+        }
+    }
+    
+    // サイネージ表示を更新
+    if (typeof updateSignageDisplay === 'function') {
+        updateSignageDisplay();
+    }
+}
+
+// 手動更新ボタンを追加
+function addManualRefreshButton() {
+    const navbar = document.querySelector('.navbar .nav-buttons');
+    if (navbar && !document.getElementById('manual-refresh-btn')) {
+        const refreshBtn = document.createElement('button');
+        refreshBtn.id = 'manual-refresh-btn';
+        refreshBtn.className = 'btn btn-secondary';
+        refreshBtn.innerHTML = '🔄 更新';
+        refreshBtn.style.marginRight = '10px';
+        refreshBtn.title = '最新のデータを取得します';
+        
+        refreshBtn.addEventListener('click', async function() {
+            this.disabled = true;
+            this.textContent = '更新中...';
+            
+            try {
+                await Promise.all([
+                    loadReservations(),
+                    loadBreakMode(),
+                    loadPopulation(),
+                    loadMenus(),
+                    loadNotices()
+                ]);
+                
+                updateUIAfterReload();
+                
+                // 成功表示
+                this.textContent = '✓ 完了';
+                setTimeout(() => {
+                    this.innerHTML = '🔄 更新';
+                    this.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('手動更新エラー:', error);
+                this.textContent = '⚠ エラー';
+                setTimeout(() => {
+                    this.innerHTML = '🔄 更新';
+                    this.disabled = false;
+                }, 2000);
+            }
+        });
+        
+        navbar.insertBefore(refreshBtn, navbar.firstChild);
+        console.log('[Auth] 手動更新ボタンを追加');
+    }
+}
+
+// ページの可視性変更に対応
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden) {
+        // ページが非表示になったら自動再読み込みを停止
+        console.log('[Auth] ページ非表示 - 自動再読み込み停止');
+        stopAutoReload();
+    } else if (currentUser) {
+        // ページが再表示されたら自動再読み込みを再開
+        console.log('[Auth] ページ表示 - 自動再読み込み再開');
+        startAutoReload();
+        
+        // 即座にデータを更新
+        setTimeout(async () => {
+            try {
+                await Promise.all([
+                    loadReservations(),
+                    loadBreakMode(),
+                    loadPopulation()
+                ]);
+                updateUIAfterReload();
+            } catch (error) {
+                console.error('ページ表示時の更新エラー:', error);
+            }
+        }, 1000);
+    }
+});
+
+// シフトデータの確認と読み込み
 async function checkAndLoadShiftData() {
     try {
         console.log('[Auth] シフトデータ確認開始');
@@ -280,7 +440,7 @@ async function checkAndLoadShiftData() {
     }
 }
 
-// サーバーからシフトデータを読み込み - 新規追加
+// サーバーからシフトデータを読み込み
 async function loadShiftDataFromServer() {
     try {
         const response = await fetch(`${API_BASE_URL}/shifts`);
@@ -305,7 +465,7 @@ async function loadShiftDataFromServer() {
     }
 }
 
-// 休憩モード読み込み - 新規追加
+// 休憩モード読み込み
 async function loadBreakMode() {
     try {
         const response = await fetch(`${API_BASE_URL}/break-mode`);
@@ -330,7 +490,7 @@ async function loadBreakMode() {
     }
 }
 
-// サイネージ表示更新 - 修正版
+// サイネージ表示更新
 function updateSignageDisplay() {
     const signageSection = document.querySelector('.section h2');
     if (!signageSection || signageSection.textContent !== 'サイネージの更新') return;
@@ -361,7 +521,7 @@ function updateSignageDisplay() {
         }
         
     } else {
-        // 通常営業時の表示 - レイアウト修正
+        // 通常営業時の表示
         section.innerHTML = `
             <h2>サイネージの更新</h2>
             <div class="population-control">
@@ -396,13 +556,12 @@ function updateSignageDisplay() {
     }
 }
 
-// 休憩開始処理 - 新規追加
+// 休憩開始処理
 function handleStartBreak() {
-    // カスタムメッセージ入力モーダルを表示
     showBreakMessageModal();
 }
 
-// 休憩メッセージモーダル表示 - 新規追加
+// 休憩メッセージモーダル表示
 function showBreakMessageModal() {
     const modalHTML = `
         <div id="break-message-modal" class="modal active">
@@ -488,7 +647,7 @@ function showBreakMessageModal() {
     }
 }
 
-// 休憩メッセージモーダルを閉じる - 新規追加
+// 休憩メッセージモーダルを閉じる
 function closeBreakMessageModal() {
     const modal = document.getElementById('break-message-modal');
     if (modal) {
@@ -496,7 +655,7 @@ function closeBreakMessageModal() {
     }
 }
 
-// 休憩モード更新処理 - 新規追加
+// 休憩モード更新処理
 async function handleUpdateBreakMode(turn, custom = '') {
     try {
         const response = await fetch(`${API_BASE_URL}/break-mode`, {
@@ -527,7 +686,7 @@ async function handleUpdateBreakMode(turn, custom = '') {
     }
 }
 
-// 営業再開処理 - 新規追加
+// 営業再開処理
 function handleResumeBusiness() {
     if (confirm('営業を再開しますか？')) {
         handleUpdateBreakMode(false, '');
@@ -668,7 +827,7 @@ async function loadMenus() {
     }
 }
 
-// 重要なお知らせ読み込み - 新規追加
+// 重要なお知らせ読み込み
 async function loadNotices() {
     try {
         const response = await fetch(`${API_BASE_URL}/notices`);
@@ -687,3 +846,8 @@ async function loadNotices() {
         notices = [];
     }
 }
+
+// グローバル関数として公開
+window.startAutoReload = startAutoReload;
+window.stopAutoReload = stopAutoReload;
+window.updateUIAfterReload = updateUIAfterReload;
