@@ -31,6 +31,7 @@ let currentReservationDetail = null;
 let holidays = [];
 let notices = [];
 let breakMode = { turn: false, custom: '' };
+let customSettings = { message: '', news: true }; // 新規追加
 
 // 自動再読み込み機能
 let autoReloadInterval = null;
@@ -197,7 +198,7 @@ function showLoginScreen() {
     hideError();
 }
 
-// 初期データ読み込み（修正版 - 自動再読み込み機能追加）
+// 初期データ読み込み（修正版 - 自動再読み込み機能追加、カスタム設定追加）
 async function loadInitialData() {
     try {
         console.log('[Auth] 初期データ読み込み開始');
@@ -208,7 +209,8 @@ async function loadInitialData() {
             loadPopulation(),
             loadHolidays(),
             loadMenus(),
-            loadNotices()
+            loadNotices(),
+            loadCustomSettings() // 新規追加
         ]);
         
         // 2. メニューデータが読み込まれた後に予約データを読み込み
@@ -244,6 +246,36 @@ async function loadInitialData() {
     }
 }
 
+// カスタム設定読み込み - 新規追加
+async function loadCustomSettings() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/custom`);
+        const data = await response.json();
+        
+        if (data.success) {
+            customSettings = {
+                message: data.message || '',
+                news: data.news !== undefined ? data.news : true
+            };
+            console.log('[Auth] カスタム設定読み込み完了:', customSettings);
+        } else {
+            customSettings = { message: '', news: true };
+        }
+        
+        // サイネージUIの更新
+        if (typeof updateSignageDisplay === 'function') {
+            updateSignageDisplay();
+        }
+        
+    } catch (error) {
+        console.error('Error loading custom settings:', error);
+        customSettings = { message: '', news: true };
+        if (typeof updateSignageDisplay === 'function') {
+            updateSignageDisplay();
+        }
+    }
+}
+
 // 自動再読み込み開始
 function startAutoReload() {
     // 既存のインターバルがある場合はクリア
@@ -261,7 +293,8 @@ function startAutoReload() {
             await Promise.all([
                 loadReservations(),
                 loadBreakMode(),
-                loadPopulation()
+                loadPopulation(),
+                loadCustomSettings() // 新規追加
             ]);
             
             // UI更新
@@ -338,7 +371,8 @@ function addManualRefreshButton() {
                     loadBreakMode(),
                     loadPopulation(),
                     loadMenus(),
-                    loadNotices()
+                    loadNotices(),
+                    loadCustomSettings() // 新規追加
                 ]);
                 
                 updateUIAfterReload();
@@ -418,7 +452,8 @@ document.addEventListener('visibilitychange', function() {
                 await Promise.all([
                     loadReservations(),
                     loadBreakMode(),
-                    loadPopulation()
+                    loadPopulation(),
+                    loadCustomSettings() // 新規追加
                 ]);
                 updateUIAfterReload();
             } catch (error) {
@@ -538,17 +573,14 @@ async function loadBreakMode() {
     }
 }
 
-// サイネージ表示更新
+// サイネージ表示更新（修正版 - カスタムメッセージとニュース表示対応）
 function updateSignageDisplay() {
-    const signageSection = document.querySelector('.section h2');
-    if (!signageSection || signageSection.textContent !== 'サイネージの更新') return;
-    
-    const section = signageSection.parentElement;
+    const signageSection = document.querySelector('#signage-management');
+    if (!signageSection) return;
     
     if (breakMode.turn) {
         // 休憩モード時の表示
-        section.innerHTML = `
-            <h2>サイネージの更新</h2>
+        signageSection.innerHTML = `
             <div class="break-mode-display">
                 <div class="break-status">
                     <span style="color: #dc3545; font-size: 1.5em; font-weight: bold;">休憩中</span>
@@ -569,9 +601,8 @@ function updateSignageDisplay() {
         }
         
     } else {
-        // 通常営業時の表示
-        section.innerHTML = `
-            <h2>サイネージの更新</h2>
+        // 通常営業時の表示（カスタムメッセージとニュース表示対応版）
+        signageSection.innerHTML = `
             <div class="population-control">
                 <div class="population-display">
                     <span>現在の待ち人数: </span>
@@ -583,6 +614,34 @@ function updateSignageDisplay() {
                 </div>
                 <div class="break-control-inline">
                     <button id="start-break-btn" class="btn btn-secondary">休憩開始</button>
+                </div>
+            </div>
+            
+            <!-- カスタムメッセージ管理セクション -->
+            <div class="custom-message-section">
+                <h3>カスタムメッセージ</h3>
+                <div class="custom-message-display">
+                    <div class="current-message">
+                        <span>現在のメッセージ: </span>
+                        <span id="current-custom-message">設定されていません</span>
+                    </div>
+                    <div class="custom-message-actions">
+                        <button id="change-custom-message-btn" class="btn btn-primary">メッセージ変更</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- ニュース表示管理セクション -->
+            <div class="news-display-section">
+                <h3>ニュース表示</h3>
+                <div class="news-display-control">
+                    <div class="news-status">
+                        <span>ニュース表示: </span>
+                        <span id="current-news-status">ON</span>
+                    </div>
+                    <div class="news-display-actions">
+                        <button id="toggle-news-display-btn" class="btn btn-secondary">表示切替</button>
+                    </div>
                 </div>
             </div>
         `;
@@ -597,6 +656,31 @@ function updateSignageDisplay() {
         const startBreakBtn = document.getElementById('start-break-btn');
         if (startBreakBtn) {
             startBreakBtn.addEventListener('click', handleStartBreak);
+        }
+        
+        // カスタムメッセージ・ニュース表示ボタンのイベントリスナー追加
+        const changeCustomMessageBtn = document.getElementById('change-custom-message-btn');
+        const toggleNewsDisplayBtn = document.getElementById('toggle-news-display-btn');
+        
+        if (changeCustomMessageBtn) {
+            changeCustomMessageBtn.addEventListener('click', () => {
+                if (typeof openCustomMessageModal === 'function') {
+                    openCustomMessageModal();
+                }
+            });
+        }
+        
+        if (toggleNewsDisplayBtn) {
+            toggleNewsDisplayBtn.addEventListener('click', () => {
+                if (typeof toggleNewsDisplay === 'function') {
+                    toggleNewsDisplay();
+                }
+            });
+        }
+        
+        // カスタム設定UIの更新
+        if (typeof updateSignageUI === 'function') {
+            updateSignageUI();
         }
         
         // 人数データを再読み込み
@@ -899,3 +983,5 @@ async function loadNotices() {
 window.startAutoReload = startAutoReload;
 window.stopAutoReload = stopAutoReload;
 window.updateUIAfterReload = updateUIAfterReload;
+window.customSettings = customSettings;
+window.loadCustomSettings = loadCustomSettings;
