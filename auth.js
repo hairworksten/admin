@@ -305,6 +305,101 @@ function updateUIAfterReload() {
     }
 }
 
+// 手動更新ボタンを追加（修正版 - 横並び対応）
+function addManualRefreshButton() {
+    const navbar = document.querySelector('.navbar .nav-buttons');
+    if (navbar && !document.getElementById('manual-refresh-btn')) {
+        // 新しい更新ボタンコンテナを作成
+        const refreshContainer = document.createElement('div');
+        refreshContainer.className = 'refresh-buttons-container';
+        
+        // データ更新ボタン
+        const dataRefreshBtn = document.createElement('button');
+        dataRefreshBtn.id = 'data-refresh-btn';
+        dataRefreshBtn.className = 'btn btn-secondary refresh-btn';
+        dataRefreshBtn.innerHTML = '<span class="refresh-icon">🔄</span><span class="refresh-text">データ</span>';
+        dataRefreshBtn.title = '予約データとシステム設定を更新します';
+        
+        // カレンダー更新ボタン
+        const calendarRefreshBtn = document.createElement('button');
+        calendarRefreshBtn.id = 'calendar-refresh-btn';
+        calendarRefreshBtn.className = 'btn btn-secondary refresh-btn';
+        calendarRefreshBtn.innerHTML = '<span class="refresh-icon">📅</span><span class="refresh-text">表示</span>';
+        calendarRefreshBtn.title = 'カレンダー表示を再描画します';
+        
+        // データ更新ボタンのイベントリスナー
+        dataRefreshBtn.addEventListener('click', async function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="refresh-icon">⏳</span><span class="refresh-text">更新中</span>';
+            
+            try {
+                await Promise.all([
+                    loadReservations(),
+                    loadBreakMode(),
+                    loadPopulation(),
+                    loadMenus(),
+                    loadNotices()
+                ]);
+                
+                updateUIAfterReload();
+                
+                // 成功表示
+                this.innerHTML = '<span class="refresh-icon">✓</span><span class="refresh-text">完了</span>';
+                setTimeout(() => {
+                    this.innerHTML = '<span class="refresh-icon">🔄</span><span class="refresh-text">データ</span>';
+                    this.disabled = false;
+                }, 2000);
+                
+            } catch (error) {
+                console.error('データ更新エラー:', error);
+                this.innerHTML = '<span class="refresh-icon">⚠</span><span class="refresh-text">エラー</span>';
+                setTimeout(() => {
+                    this.innerHTML = '<span class="refresh-icon">🔄</span><span class="refresh-text">データ</span>';
+                    this.disabled = false;
+                }, 2000);
+            }
+        });
+        
+        // カレンダー更新ボタンのイベントリスナー
+        calendarRefreshBtn.addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = '<span class="refresh-icon">⏳</span><span class="refresh-text">更新中</span>';
+            
+            try {
+                // カレンダー表示を更新
+                if (typeof renderCalendar === 'function') {
+                    renderCalendar();
+                }
+                if (typeof renderMenuLegend === 'function') {
+                    renderMenuLegend();
+                }
+                
+                // 成功表示
+                this.innerHTML = '<span class="refresh-icon">✓</span><span class="refresh-text">完了</span>';
+                setTimeout(() => {
+                    this.innerHTML = '<span class="refresh-icon">📅</span><span class="refresh-text">表示</span>';
+                    this.disabled = false;
+                }, 1500);
+                
+            } catch (error) {
+                console.error('カレンダー更新エラー:', error);
+                this.innerHTML = '<span class="refresh-icon">⚠</span><span class="refresh-text">エラー</span>';
+                setTimeout(() => {
+                    this.innerHTML = '<span class="refresh-icon">📅</span><span class="refresh-text">表示</span>';
+                    this.disabled = false;
+                }, 2000);
+            }
+        });
+        
+        // ボタンをコンテナに追加
+        refreshContainer.appendChild(dataRefreshBtn);
+        refreshContainer.appendChild(calendarRefreshBtn);
+        
+        // ログアウトボタンの前に挿入
+        navbar.insertBefore(refreshContainer, navbar.firstChild);
+        console.log('[Auth] 手動更新ボタン（横並び）を追加');
+    }
+}
 
 // ページの可視性変更に対応
 document.addEventListener('visibilitychange', function() {
