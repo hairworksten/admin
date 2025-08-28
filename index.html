@@ -48,19 +48,49 @@
 
             <div id="home-tab" class="tab-content active">
                 <div class="section">
-                    <h2>サイネージの更新</h2>
-                    <!-- この部分は JavaScript の updateSignageDisplay() で動的に更新されます -->
-                    <div class="population-control">
-                        <div class="population-display">
-                            <span>現在の待ち人数: </span>
-                            <span id="current-population">0</span>
+                    <h2>デジタルサイネージ管理</h2>
+                    <div id="signage-management" class="signage-management">
+                        <!-- この部分は JavaScript の updateSignageDisplay() で動的に更新されます -->
+                        <div class="population-control">
+                            <div class="population-display">
+                                <span>現在の待ち人数: </span>
+                                <span id="current-population">0</span>
+                            </div>
+                            <div class="population-buttons">
+                                <button id="population-minus" class="btn btn-primary">-</button>
+                                <button id="population-plus" class="btn btn-primary">+</button>
+                            </div>
+                            <div class="break-control-inline">
+                                <button id="start-break-btn" class="btn btn-secondary">休憩開始</button>
+                            </div>
                         </div>
-                        <div class="population-buttons">
-                            <button id="population-minus" class="btn btn-primary">-</button>
-                            <button id="population-plus" class="btn btn-primary">+</button>
+                        
+                        <!-- カスタムメッセージ管理セクション -->
+                        <div class="custom-message-section">
+                            <h3>カスタムメッセージ</h3>
+                            <div class="custom-message-display">
+                                <div class="current-message">
+                                    <span>現在のメッセージ: </span>
+                                    <span id="current-custom-message">設定されていません</span>
+                                </div>
+                                <div class="custom-message-actions">
+                                    <button id="change-custom-message-btn" class="btn btn-primary">メッセージ変更</button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="break-control-inline">
-                            <button id="start-break-btn" class="btn btn-secondary">休憩開始</button>
+                        
+                        <!-- ニュース表示管理セクション -->
+                        <div class="news-display-section">
+                            <h3>ニュース表示</h3>
+                            <div class="news-display-control">
+                                <div class="news-status">
+                                    <span>ニュース表示: </span>
+                                    <span id="current-news-status">ON</span>
+                                </div>
+                                <div class="news-display-actions">
+                                    <button id="toggle-news-display-btn" class="btn btn-secondary">表示切替</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -376,6 +406,43 @@
             </div>
         </div>
     </div>
+
+    <!-- カスタムメッセージ変更モーダル -->
+    <div id="custom-message-modal" class="modal">
+        <div class="modal-content">
+            <h3>カスタムメッセージ変更</h3>
+            <div class="custom-message-form">
+                <div class="form-group">
+                    <label for="custom-message-input">デジタルサイネージに表示するメッセージを入力してください:</label>
+                    <textarea id="custom-message-input" placeholder="例：本日は混雑が予想されます。お時間に余裕をもってお越しください。" rows="4"></textarea>
+                </div>
+                
+                <div class="custom-message-templates">
+                    <h4>定型文</h4>
+                    <div class="template-buttons">
+                        <button type="button" class="btn btn-small btn-secondary template-btn" data-template="本日は混雑が予想されます。">混雑予想</button>
+                        <button type="button" class="btn btn-small btn-secondary template-btn" data-template="キャンペーン実施中！">キャンペーン</button>
+                        <button type="button" class="btn btn-small btn-secondary template-btn" data-template="新メニュー追加しました。">新メニュー</button>
+                        <button type="button" class="btn btn-small btn-secondary template-btn" data-template="お時間に余裕をもってお越しください。">時間余裕</button>
+                    </div>
+                </div>
+                
+                <div class="custom-message-notes">
+                    <h4>📝 注意事項</h4>
+                    <ul>
+                        <li>空欄にすると「設定されていません」と表示されます</li>
+                        <li>変更は即座にデジタルサイネージに反映されます</li>
+                        <li>改行は自動で調整されます</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="modal-buttons">
+                <button id="update-custom-message-btn" class="btn btn-primary">メッセージ更新</button>
+                <button id="cancel-custom-message-btn" class="btn btn-secondary">キャンセル</button>
+            </div>
+        </div>
+    </div>
     
     <!-- シフト管理用のデバッグコンソール（開発用） -->
     <div id="shift-debug-console" style="display: none; position: fixed; bottom: 10px; right: 10px; background: #000; color: #0f0; padding: 10px; font-family: monospace; font-size: 12px; max-width: 300px; max-height: 200px; overflow-y: auto; z-index: 9999; border-radius: 5px;">
@@ -421,6 +488,7 @@
     <script src="modals.js"></script>
     <script src="add-reservation.js"></script>
     <script src="reservation-blocking.js"></script>
+    <script src="signage-management.js"></script>
     
     <!-- リアルタイム更新機能 -->
     <script src="firestore-listener.js"></script>
