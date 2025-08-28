@@ -31,7 +31,7 @@ let currentReservationDetail = null;
 let holidays = [];
 let notices = [];
 let breakMode = { turn: false, custom: '' };
-let customSettings = { message: '', news: true }; // 新規追加
+let customSettings = { message: '', news: true }; // カスタムサイネージ設定
 
 // 自動再読み込み機能
 let autoReloadInterval = null;
@@ -210,7 +210,7 @@ async function loadInitialData() {
             loadHolidays(),
             loadMenus(),
             loadNotices(),
-            loadCustomSettings() // 新規追加
+            loadCustomSettings() // カスタム設定読み込み
         ]);
         
         // 2. メニューデータが読み込まれた後に予約データを読み込み
@@ -246,7 +246,7 @@ async function loadInitialData() {
     }
 }
 
-// カスタム設定読み込み - 新規追加
+// カスタム設定読み込み
 async function loadCustomSettings() {
     try {
         const response = await fetch(`${API_BASE_URL}/custom`);
@@ -294,7 +294,7 @@ function startAutoReload() {
                 loadReservations(),
                 loadBreakMode(),
                 loadPopulation(),
-                loadCustomSettings() // 新規追加
+                loadCustomSettings() // カスタム設定も更新
             ]);
             
             // UI更新
@@ -372,7 +372,7 @@ function addManualRefreshButton() {
                     loadPopulation(),
                     loadMenus(),
                     loadNotices(),
-                    loadCustomSettings() // 新規追加
+                    loadCustomSettings() // カスタム設定も更新
                 ]);
                 
                 updateUIAfterReload();
@@ -453,7 +453,7 @@ document.addEventListener('visibilitychange', function() {
                     loadReservations(),
                     loadBreakMode(),
                     loadPopulation(),
-                    loadCustomSettings() // 新規追加
+                    loadCustomSettings() // カスタム設定も更新
                 ]);
                 updateUIAfterReload();
             } catch (error) {
@@ -573,10 +573,15 @@ async function loadBreakMode() {
     }
 }
 
-// サイネージ表示更新（修正版 - カスタムメッセージとニュース表示対応）
+// サイネージ表示更新（修正版 - 直接イベントリスナー設定）
 function updateSignageDisplay() {
     const signageSection = document.querySelector('#signage-management');
-    if (!signageSection) return;
+    if (!signageSection) {
+        console.warn('[Auth] signage-management セクションが見つかりません');
+        return;
+    }
+    
+    console.log('[Auth] サイネージ表示更新開始');
     
     if (breakMode.turn) {
         // 休憩モード時の表示
@@ -598,10 +603,11 @@ function updateSignageDisplay() {
         const resumeBtn = document.getElementById('resume-business-btn');
         if (resumeBtn) {
             resumeBtn.addEventListener('click', handleResumeBusiness);
+            console.log('[Auth] 営業再開ボタンにイベントリスナー設定');
         }
         
     } else {
-        // 通常営業時の表示（カスタムメッセージとニュース表示対応版）
+        // 通常営業時の表示
         signageSection.innerHTML = `
             <div class="population-control">
                 <div class="population-display">
@@ -649,42 +655,299 @@ function updateSignageDisplay() {
         // 人数変更ボタンのイベントリスナー再設定
         const populationMinusBtn = document.getElementById('population-minus');
         const populationPlusBtn = document.getElementById('population-plus');
-        if (populationMinusBtn) populationMinusBtn.addEventListener('click', () => updatePopulation(-1));
-        if (populationPlusBtn) populationPlusBtn.addEventListener('click', () => updatePopulation(1));
+        if (populationMinusBtn) {
+            populationMinusBtn.addEventListener('click', () => updatePopulation(-1));
+            console.log('[Auth] 人数マイナスボタンにイベントリスナー設定');
+        }
+        if (populationPlusBtn) {
+            populationPlusBtn.addEventListener('click', () => updatePopulation(1));
+            console.log('[Auth] 人数プラスボタンにイベントリスナー設定');
+        }
         
         // 休憩開始ボタンのイベントリスナー追加
         const startBreakBtn = document.getElementById('start-break-btn');
         if (startBreakBtn) {
             startBreakBtn.addEventListener('click', handleStartBreak);
+            console.log('[Auth] 休憩開始ボタンにイベントリスナー設定');
         }
         
-        // カスタムメッセージ・ニュース表示ボタンのイベントリスナー追加
+        // ★重要：カスタムメッセージとニュース表示ボタンのイベントリスナーを直接設定
         const changeCustomMessageBtn = document.getElementById('change-custom-message-btn');
         const toggleNewsDisplayBtn = document.getElementById('toggle-news-display-btn');
         
         if (changeCustomMessageBtn) {
-            changeCustomMessageBtn.addEventListener('click', () => {
-                if (typeof openCustomMessageModal === 'function') {
-                    openCustomMessageModal();
-                }
+            changeCustomMessageBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('[Auth] カスタムメッセージボタンがクリックされました');
+                openCustomMessageModal();
             });
+            console.log('[Auth] カスタムメッセージボタンにイベントリスナー設定');
+        } else {
+            console.error('[Auth] change-custom-message-btn要素が見つかりません');
         }
         
         if (toggleNewsDisplayBtn) {
-            toggleNewsDisplayBtn.addEventListener('click', () => {
-                if (typeof toggleNewsDisplay === 'function') {
-                    toggleNewsDisplay();
-                }
+            toggleNewsDisplayBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('[Auth] ニュース表示切り替えボタンがクリックされました');
+                toggleNewsDisplay();
             });
+            console.log('[Auth] ニュース表示切り替えボタンにイベントリスナー設定');
+        } else {
+            console.error('[Auth] toggle-news-display-btn要素が見つかりません');
         }
         
-        // カスタム設定UIの更新
-        if (typeof updateSignageUI === 'function') {
-            updateSignageUI();
-        }
+        // UI更新
+        updateSignageUIDirectly();
         
         // 人数データを再読み込み
         loadPopulation();
+    }
+}
+
+// サイネージUIを直接更新
+function updateSignageUIDirectly() {
+    console.log('[Auth] サイネージUI直接更新:', customSettings);
+    
+    // カスタムメッセージ表示更新
+    const currentCustomMessageSpan = document.getElementById('current-custom-message');
+    if (currentCustomMessageSpan) {
+        const messageText = customSettings.message || '設定されていません';
+        currentCustomMessageSpan.textContent = messageText;
+        currentCustomMessageSpan.style.color = customSettings.message ? '#ffffff' : '#888';
+        currentCustomMessageSpan.style.fontStyle = customSettings.message ? 'normal' : 'italic';
+        console.log('[Auth] カスタムメッセージ表示更新:', messageText);
+    } else {
+        console.warn('[Auth] current-custom-message要素が見つかりません');
+    }
+    
+    // ニュース表示ステータス更新
+    const currentNewsStatusSpan = document.getElementById('current-news-status');
+    if (currentNewsStatusSpan) {
+        const statusText = customSettings.news ? 'ON' : 'OFF';
+        currentNewsStatusSpan.textContent = statusText;
+        currentNewsStatusSpan.style.color = customSettings.news ? '#28a745' : '#dc3545';
+        currentNewsStatusSpan.style.fontWeight = 'bold';
+        console.log('[Auth] ニュース表示ステータス更新:', statusText);
+    } else {
+        console.warn('[Auth] current-news-status要素が見つかりません');
+    }
+    
+    // ニュース表示ボタンのテキスト更新
+    const toggleNewsDisplayBtn = document.getElementById('toggle-news-display-btn');
+    if (toggleNewsDisplayBtn) {
+        toggleNewsDisplayBtn.textContent = customSettings.news ? 'ニュース非表示' : 'ニュース表示';
+        toggleNewsDisplayBtn.className = customSettings.news ? 'btn btn-warning' : 'btn btn-success';
+        console.log('[Auth] ニュース表示ボタン更新:', toggleNewsDisplayBtn.textContent);
+    } else {
+        console.warn('[Auth] toggle-news-display-btn要素が見つかりません');
+    }
+}
+
+// カスタムメッセージモーダルを開く
+function openCustomMessageModal() {
+    console.log('[Auth] カスタムメッセージモーダルを開く');
+    
+    const customMessageModal = document.getElementById('custom-message-modal');
+    if (customMessageModal) {
+        const customMessageInput = document.getElementById('custom-message-input');
+        if (customMessageInput) {
+            customMessageInput.value = customSettings.message || '';
+            // フォーカスは少し遅延させる
+            setTimeout(() => {
+                if (customMessageInput) {
+                    customMessageInput.focus();
+                }
+            }, 100);
+        }
+        
+        customMessageModal.classList.add('active');
+        console.log('[Auth] カスタムメッセージモーダル表示');
+        
+        // モーダル内のイベントリスナーを設定
+        setupCustomMessageModalEvents();
+        
+    } else {
+        console.error('[Auth] カスタムメッセージモーダルが見つかりません');
+        alert('カスタムメッセージモーダルを開けませんでした。');
+    }
+}
+
+// ニュース表示切り替え
+function toggleNewsDisplay() {
+    console.log('[Auth] ニュース表示切り替え処理開始');
+    
+    const newNewsStatus = !customSettings.news;
+    console.log('[Auth] 新しいニュース表示状態:', newNewsStatus);
+    
+    // 確認ダイアログ
+    const confirmMessage = `ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしますか？`;
+    if (!confirm(confirmMessage)) {
+        console.log('[Auth] ニュース表示切り替えキャンセル');
+        return;
+    }
+    
+    const toggleNewsDisplayBtn = document.getElementById('toggle-news-display-btn');
+    
+    // ボタン無効化
+    if (toggleNewsDisplayBtn) {
+        toggleNewsDisplayBtn.disabled = true;
+        toggleNewsDisplayBtn.textContent = '更新中...';
+    }
+    
+    handleToggleNewsDisplay(newNewsStatus);
+}
+
+// ニュース表示切り替え処理
+async function handleToggleNewsDisplay(newNewsStatus) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/custom/news`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ news: newNewsStatus })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('[Auth] ニュース表示API応答:', data);
+        
+        if (data.success) {
+            customSettings.news = newNewsStatus;
+            updateSignageUIDirectly();
+            alert(`ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしました。`);
+            console.log('[Auth] ニュース表示切り替え成功');
+        } else {
+            throw new Error(data.error || 'ニュース表示設定の更新に失敗しました');
+        }
+    } catch (error) {
+        console.error('[Auth] ニュース表示更新エラー:', error);
+        alert(`ニュース表示設定の更新に失敗しました。\nエラー: ${error.message}`);
+    } finally {
+        // ボタン再有効化
+        const toggleNewsDisplayBtn = document.getElementById('toggle-news-display-btn');
+        if (toggleNewsDisplayBtn) {
+            toggleNewsDisplayBtn.disabled = false;
+            updateSignageUIDirectly(); // ボタンテキストを元に戻す
+        }
+    }
+}
+
+// カスタムメッセージモーダルのイベント設定
+function setupCustomMessageModalEvents() {
+    console.log('[Auth] カスタムメッセージモーダルイベント設定');
+    
+    const updateBtn = document.getElementById('update-custom-message-btn');
+    const cancelBtn = document.getElementById('cancel-custom-message-btn');
+    const templateBtns = document.querySelectorAll('.template-btn');
+    
+    // 更新ボタン
+    if (updateBtn) {
+        // 既存のイベントリスナーを削除してから新しいものを追加
+        updateBtn.removeEventListener('click', handleUpdateCustomMessage);
+        updateBtn.addEventListener('click', handleUpdateCustomMessage);
+        console.log('[Auth] 更新ボタンにイベントリスナー設定');
+    } else {
+        console.warn('[Auth] 更新ボタンが見つかりません');
+    }
+    
+    // キャンセルボタン
+    if (cancelBtn) {
+        cancelBtn.removeEventListener('click', closeCustomMessageModal);
+        cancelBtn.addEventListener('click', closeCustomMessageModal);
+        console.log('[Auth] キャンセルボタンにイベントリスナー設定');
+    }
+    
+    // 定型文ボタン
+    templateBtns.forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const template = this.dataset.template;
+            const input = document.getElementById('custom-message-input');
+            if (input && template) {
+                input.value = template;
+                console.log('[Auth] 定型文適用:', template);
+            }
+        });
+    });
+    
+    console.log('[Auth] 定型文ボタン設定完了:', templateBtns.length, '個');
+}
+
+// カスタムメッセージモーダルを閉じる
+function closeCustomMessageModal() {
+    console.log('[Auth] カスタムメッセージモーダルを閉じる');
+    
+    const modal = document.getElementById('custom-message-modal');
+    if (modal) {
+        modal.classList.remove('active');
+    }
+    
+    // フォームをリセット
+    const input = document.getElementById('custom-message-input');
+    if (input) {
+        input.value = '';
+    }
+}
+
+// カスタムメッセージ更新処理
+async function handleUpdateCustomMessage(e) {
+    if (e) e.preventDefault();
+    
+    console.log('[Auth] カスタムメッセージ更新処理開始');
+    
+    const input = document.getElementById('custom-message-input');
+    const newMessage = input ? input.value.trim() : '';
+    
+    console.log('[Auth] 新しいメッセージ:', newMessage);
+    
+    const updateBtn = document.getElementById('update-custom-message-btn');
+    
+    // ボタン無効化
+    if (updateBtn) {
+        updateBtn.disabled = true;
+        updateBtn.textContent = '更新中...';
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/custom/message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: newMessage })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('[Auth] カスタムメッセージAPI応答:', data);
+        
+        if (data.success) {
+            customSettings.message = newMessage;
+            updateSignageUIDirectly();
+            closeCustomMessageModal();
+            
+            const successMessage = newMessage ? 
+                `カスタムメッセージを更新しました。\n「${newMessage}」` :
+                'カスタムメッセージをクリアしました。';
+            
+            alert(successMessage);
+            console.log('[Auth] カスタムメッセージ更新成功');
+        } else {
+            throw new Error(data.error || 'カスタムメッセージの更新に失敗しました');
+        }
+    } catch (error) {
+        console.error('[Auth] カスタムメッセージ更新エラー:', error);
+        alert(`カスタムメッセージの更新に失敗しました。\nエラー: ${error.message}`);
+    } finally {
+        // ボタン再有効化
+        if (updateBtn) {
+            updateBtn.disabled = false;
+            updateBtn.textContent = 'メッセージ更新';
+        }
     }
 }
 
