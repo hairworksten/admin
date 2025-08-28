@@ -338,3 +338,464 @@
         font-size: 10px;
     }
 }
+
+/* 手動更新ボタンコンテナ */
+.refresh-buttons-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-right: 15px;
+}
+
+/* 更新ボタン共通スタイル */
+.refresh-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 80px;
+    padding: 8px 12px;
+    font-size: 14px;
+    font-weight: 500;
+    border: 2px solid #666;
+    border-radius: 6px;
+    background-color: #555;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-decoration: none;
+    user-select: none;
+}
+
+.refresh-btn:hover {
+    background-color: #666;
+    border-color: #777;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.refresh-btn:active {
+    transform: translateY(0);
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.refresh-btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* 更新ボタンのアイコンとテキスト */
+.refresh-icon {
+    font-size: 14px;
+    line-height: 1;
+    display: inline-block;
+    min-width: 14px;
+    text-align: center;
+}
+
+.refresh-text {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* デスクトップ用レスポンシブ */
+@media (min-width: 769px) {
+    .search-form {
+        flex-direction: row;
+        align-items: center;
+    }
+    
+    .search-form input[type="text"] {
+        flex: 2;
+    }
+    
+    .date-range-container {
+        flex: 1;
+    }
+    
+    .btn {
+        width: auto;
+    }
+    
+    .calendar-controls {
+        justify-content: center;
+        gap: 30px;
+    }
+    
+    .calendar-day {
+        min-height: 140px;
+    }
+    
+    .reservation-item-calendar {
+        font-size: 12px;
+        padding: 4px 6px;
+    }
+    
+    .legend-grid {
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    }
+    
+    /* デスクトップでは休憩開始ボタンを+/-ボタンの右側に配置 */
+    .population-control {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        font-size: 1.2em;
+        flex-wrap: nowrap;
+    }
+    
+    .population-display {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .population-buttons {
+        display: flex;
+        gap: 15px;
+    }
+    
+    .break-control-inline {
+        display: flex;
+        align-items: center;
+        margin-left: 15px;
+    }
+    
+    #current-population {
+        font-size: 2em;
+        font-weight: bold;
+        color: #ff6b35;
+        min-width: 60px;
+        text-align: center;
+    }
+    
+    .population-control .btn {
+        width: auto;
+        min-width: 50px;
+    }
+    
+    /* デスクトップ：更新ボタンはフルサイズ */
+    .refresh-btn {
+        min-width: 90px;
+        padding: 10px 16px;
+        font-size: 14px;
+    }
+    
+    .refresh-text {
+        font-size: 13px;
+    }
+    
+    .refresh-icon {
+        font-size: 15px;
+    }
+}
+
+/* モバイル用レスポンシブ */
+@media (max-width: 768px) {
+    .login-container {
+        padding: 20px;
+    }
+    
+    .login-container h1 {
+        font-size: 2em;
+    }
+    
+    .login-form {
+        width: 100%;
+        max-width: 100%;
+    }
+    
+    .login-form input, 
+    .login-form .btn {
+        font-size: 16px; /* iOSでズームを防ぐ */
+        min-height: 44px; /* タッチしやすいサイズ */
+    }
+    
+    .tab-container {
+        padding: 10px;
+    }
+    
+    .section {
+        padding: 20px;
+    }
+    
+    .navbar {
+        padding: 10px 20px;
+    }
+    
+    .navbar h1 {
+        font-size: 1.5em;
+    }
+    
+    /* モバイル：更新ボタンのレスポンシブ調整 */
+    .refresh-buttons-container {
+        gap: 6px;
+        margin-right: 10px;
+    }
+    
+    .refresh-btn {
+        min-width: 70px;
+        padding: 8px 10px;
+        font-size: 12px;
+        gap: 4px;
+    }
+    
+    .refresh-text {
+        font-size: 11px;
+    }
+    
+    .refresh-icon {
+        font-size: 13px;
+    }
+    
+    .tabs {
+        gap: 5px;
+    }
+    
+    .tab-btn {
+        padding: 12px 20px;
+        font-size: 14px;
+        min-width: 80px;
+    }
+    
+    .modal-content {
+        padding: 20px;
+        width: 95%;
+    }
+    
+    .reservation-actions {
+        justify-content: center;
+    }
+    
+    .menu-actions,
+    .template-actions,
+    .holiday-actions {
+        justify-content: center;
+    }
+    
+    /* モバイル時は縦並びレイアウト - 修正版 */
+    .population-control {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        font-size: 1.2em;
+        text-align: center;
+    }
+    
+    .population-display {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        justify-content: center;
+        flex-wrap: nowrap;
+    }
+    
+    .population-buttons {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        align-items: center;
+    }
+    
+    /* モバイルでは休憩開始ボタンを下段に配置 */
+    .break-control-inline {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin: 0;
+        width: 100%;
+    }
+    
+    #current-population {
+        font-size: 1.8em;
+        font-weight: bold;
+        color: #ff6b35;
+        min-width: 60px;
+        text-align: center;
+    }
+    
+    .population-control .btn {
+        width: auto;
+        min-width: 50px;
+        min-height: 50px;
+        font-size: 18px;
+        font-weight: bold;
+    }
+    
+    /* 休憩開始ボタンのモバイル専用スタイル */
+    .break-control-inline .btn {
+        min-width: 120px;
+        padding: 12px 20px;
+        font-size: 16px;
+    }
+    
+    /* カレンダーモバイル対応（見切れ防止） */
+    .calendar-container {
+        width: 100%;
+        overflow-x: auto; /* 横スクロールを有効化 */
+        -webkit-overflow-scrolling: touch; /* iOSでスムーズスクロール */
+        margin-bottom: 30px;
+        /* スクロールバーのスタイリング */
+        scrollbar-width: thin;
+        scrollbar-color: #ff6b35 #3a3a3a;
+    }
+    
+    .calendar-container::-webkit-scrollbar {
+        height: 6px;
+    }
+    
+    .calendar-container::-webkit-scrollbar-track {
+        background: #3a3a3a;
+        border-radius: 3px;
+    }
+    
+    .calendar-container::-webkit-scrollbar-thumb {
+        background: #ff6b35;
+        border-radius: 3px;
+    }
+    
+    .calendar-container::-webkit-scrollbar-thumb:hover {
+        background: #e55a2d;
+    }
+    
+    .calendar-grid {
+        min-width: 400px; /* 最小幅を設定してグリッドが潰れるのを防ぐ */
+        width: 100%;
+        grid-template-columns: repeat(7, minmax(55px, 1fr)); /* 各列の最小幅を設定 */
+    }
+    
+    .calendar-day-header {
+        padding: 8px 2px;
+        font-size: 12px;
+        min-width: 55px; /* ヘッダーの最小幅 */
+    }
+    
+    .calendar-day {
+        min-height: 80px; /* モバイルでは高さを少し小さく */
+        min-width: 55px; /* 各日付セルの最小幅 */
+        padding: 3px;
+    }
+    
+    .reservation-item-calendar {
+        font-size: 9px; /* さらに小さく */
+        padding: 1px 3px;
+        margin-bottom: 1px;
+    }
+    
+    .day-number {
+        font-size: 11px;
+        margin-bottom: 3px;
+    }
+    
+    .holiday-label {
+        font-size: 8px;
+    }
+    
+    .calendar-controls {
+        flex-direction: row; /* モバイルでも横並び */
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 15px;
+    }
+    
+    .calendar-controls .btn {
+        min-width: 60px;
+        padding: 8px 12px;
+        font-size: 14px;
+    }
+    
+    .month-year {
+        font-size: 1.2em;
+    }
+    
+    .legend-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    }
+    
+    .detail-label {
+        min-width: 100px;
+        margin-right: 10px;
+    }
+    
+    /* フォームモバイル対応 */
+    .password-form, 
+    .holiday-form, 
+    .menu-form, 
+    .template-form {
+        max-width: 100%;
+    }
+    
+    .search-form {
+        max-width: 100%;
+    }
+    
+    .date-range-container {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .date-range-container input[type="date"] {
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .date-range-container span {
+        text-align: center;
+        margin: 5px 0;
+    }
+}
+
+/* 極小画面対応（320px以下） */
+@media (max-width: 320px) {
+    /* 極小画面：更新ボタンをさらにコンパクト化 */
+    .refresh-buttons-container {
+        gap: 4px;
+        margin-right: 8px;
+    }
+    
+    .refresh-btn {
+        min-width: 60px;
+        padding: 6px 8px;
+        font-size: 11px;
+        gap: 3px;
+    }
+    
+    .refresh-text {
+        font-size: 10px;
+    }
+    
+    .refresh-icon {
+        font-size: 12px;
+    }
+    
+    .calendar-grid {
+        min-width: 350px; /* より小さい画面でも見切れを防ぐ */
+        grid-template-columns: repeat(7, minmax(50px, 1fr));
+    }
+    
+    .calendar-day {
+        min-width: 50px;
+        min-height: 70px;
+    }
+    
+    .calendar-day-header {
+        min-width: 50px;
+        padding: 6px 1px;
+        font-size: 11px;
+    }
+    
+    .reservation-item-calendar {
+        font-size: 8px;
+        padding: 1px 2px;
+    }
+    
+    .day-number {
+        font-size: 10px;
+    }
+}
