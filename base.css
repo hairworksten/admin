@@ -140,6 +140,15 @@ input, textarea {
     background-color: #218838;
 }
 
+.btn-warning {
+    background-color: #ffc107;
+    color: #000000;
+}
+
+.btn-warning:hover {
+    background-color: #e0a800;
+}
+
 .btn-small {
     padding: 8px 16px;
     font-size: 14px;
@@ -311,7 +320,223 @@ input, textarea {
     font-size: 1.4em;
 }
 
-/* 休憩モード表示スタイル - 新規追加 */
+/* デジタルサイネージ管理スタイル - 新規追加 */
+.signage-management {
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
+}
+
+/* カスタムメッセージセクション */
+.custom-message-section {
+    background-color: #4a4a4a;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #555;
+}
+
+.custom-message-section h3 {
+    color: #17a2b8;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+.custom-message-display {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.current-message {
+    flex: 1;
+    min-width: 200px;
+}
+
+.current-message span:first-child {
+    font-weight: bold;
+    color: #17a2b8;
+}
+
+#current-custom-message {
+    margin-left: 10px;
+    padding: 8px 12px;
+    background-color: #555;
+    border-radius: 6px;
+    display: inline-block;
+    min-width: 150px;
+    word-break: break-word;
+}
+
+.custom-message-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* ニュース表示セクション */
+.news-display-section {
+    background-color: #4a4a4a;
+    padding: 20px;
+    border-radius: 10px;
+    border: 2px solid #555;
+}
+
+.news-display-section h3 {
+    color: #28a745;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+.news-display-control {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.news-status {
+    flex: 1;
+    min-width: 150px;
+}
+
+.news-status span:first-child {
+    font-weight: bold;
+    color: #28a745;
+}
+
+#current-news-status {
+    margin-left: 10px;
+    padding: 6px 12px;
+    background-color: #555;
+    border-radius: 4px;
+    display: inline-block;
+    min-width: 50px;
+    text-align: center;
+    font-weight: bold;
+}
+
+.news-display-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* カスタムメッセージモーダル */
+.custom-message-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.custom-message-form .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.custom-message-form label {
+    font-weight: bold;
+    color: #ffffff;
+    font-size: 16px;
+}
+
+.custom-message-form textarea {
+    padding: 15px;
+    border: 2px solid #555;
+    border-radius: 8px;
+    background-color: #4a4a4a;
+    color: #ffffff;
+    font-size: 16px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 120px;
+}
+
+.custom-message-form textarea:focus {
+    outline: none;
+    border-color: #17a2b8;
+    background-color: #525252;
+}
+
+.custom-message-templates {
+    background-color: #4a4a4a;
+    padding: 15px;
+    border-radius: 8px;
+    border: 1px solid #555;
+}
+
+.custom-message-templates h4 {
+    color: #17a2b8;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.template-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.template-btn {
+    background-color: #555;
+    color: #ffffff;
+    border: 2px solid #666;
+    border-radius: 6px;
+    padding: 8px 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+.template-btn:hover {
+    background-color: #666;
+    border-color: #17a2b8;
+    transform: translateY(-1px);
+}
+
+.template-btn:active {
+    transform: translateY(0);
+}
+
+.custom-message-notes {
+    background-color: #3a3a3a;
+    border: 2px solid #17a2b8;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+.custom-message-notes h4 {
+    color: #17a2b8;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+}
+
+.custom-message-notes ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.custom-message-notes li {
+    color: #ffffff;
+    font-size: 14px;
+    margin-bottom: 8px;
+    padding-left: 20px;
+    position: relative;
+    line-height: 1.4;
+}
+
+.custom-message-notes li:before {
+    content: "•";
+    color: #17a2b8;
+    position: absolute;
+    left: 0;
+    font-weight: bold;
+}
+
+/* 休憩モード表示スタイル */
 .break-mode-display {
     display: flex;
     flex-direction: column;
@@ -350,7 +575,7 @@ input, textarea {
     gap: 15px;
 }
 
-/* 休憩メッセージモーダルスタイル - 新規追加 */
+/* 休憩メッセージモーダルスタイル */
 .break-message-form {
     display: flex;
     flex-direction: column;
@@ -500,6 +725,43 @@ input, textarea {
     .refresh-icon {
         font-size: 13px;
     }
+    
+    /* モバイル：デジタルサイネージ管理 */
+    .custom-message-display,
+    .news-display-control {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+    
+    .current-message,
+    .news-status {
+        min-width: auto;
+        margin-bottom: 10px;
+    }
+    
+    #current-custom-message {
+        margin-left: 0;
+        margin-top: 8px;
+        display: block;
+        text-align: center;
+    }
+    
+    #current-news-status {
+        margin-left: 0;
+        margin-top: 8px;
+        display: block;
+        text-align: center;
+    }
+    
+    .template-buttons {
+        justify-content: center;
+    }
+    
+    .template-btn {
+        flex: 1;
+        min-width: 100px;
+    }
 }
 
 /* 極小画面対応 */
@@ -521,30 +783,4 @@ input, textarea {
         flex-wrap: wrap;
     }
     
-    .nav-buttons .btn {
-        min-width: 70px;
-        font-size: 12px;
-        padding: 6px 10px;
-    }
-    
-    /* 極小画面：更新ボタンをさらにコンパクト化 */
-    .refresh-buttons-container {
-        gap: 4px;
-        margin-right: 8px;
-    }
-    
-    .refresh-btn {
-        min-width: 60px;
-        padding: 6px 8px;
-        font-size: 11px;
-        gap: 3px;
-    }
-    
-    .refresh-text {
-        font-size: 10px;
-    }
-    
-    .refresh-icon {
-        font-size: 12px;
-    }
-}
+    .nav
