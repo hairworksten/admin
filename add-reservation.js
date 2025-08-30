@@ -1,4 +1,4 @@
-// 予約追加機能のJavaScript（統一APIエンドポイント対応版）
+// 予約追加機能のJavaScript（管理者強制追加対応版）
 
 // DOM要素
 const addReservationModal = document.getElementById('add-reservation-modal');
@@ -16,6 +16,7 @@ const addReservationTimeslotsDiv = document.getElementById('add-reservation-time
 // 選択された時間を保存する変数
 let selectedTimeSlot = null;
 let isCustomTime = false; // カスタム時間かどうかのフラグ
+let forceAddMode = false; // 強制追加モードかどうかのフラグ
 
 // 時間スロット設定（予約サイトと同じ）
 const timeSlots = {
@@ -78,14 +79,14 @@ function openAddReservationModal() {
     // メニューオプションを設定
     populateMenuOptions();
     
-    // 今日の日付を最小値として設定
+    // 管理者は過去日・当日からでも選択可能にする
     const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1); // 明日から選択可能
-    const tomorrowString = tomorrow.toISOString().split('T')[0];
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1); // 昨日から選択可能（管理者権限）
+    const yesterdayString = yesterday.toISOString().split('T')[0];
     
     if (addReservationDateInput) {
-        addReservationDateInput.min = tomorrowString;
+        addReservationDateInput.min = yesterdayString; // 昨日から選択可能
         addReservationDateInput.value = '';
     }
     
@@ -113,6 +114,7 @@ function resetAddReservationForm() {
     
     selectedTimeSlot = null;
     isCustomTime = false;
+    forceAddMode = false;
     
     if (submitAddReservationBtn) {
         submitAddReservationBtn.disabled = false;
@@ -159,7 +161,7 @@ async function handleDateChange() {
     await displayAvailableTimeSlots(selectedDate);
 }
 
-// 利用可能な時間スロットを表示（カスタム時間対応版）
+// 利用可能な時間スロットを表示（管理者強制追加対応版）
 async function displayAvailableTimeSlots(date) {
     if (!addReservationTimeslotsDiv) return;
     
@@ -179,6 +181,16 @@ async function displayAvailableTimeSlots(date) {
         
         addReservationTimeslotsDiv.innerHTML = '';
         
+        // 管理者通知メッセージを追加
+        const adminNoticeDiv = document.createElement('div');
+        adminNoticeDiv.innerHTML = `
+            <div style="background-color: #17a2b8; color: #ffffff; padding: 12px; border-radius: 8px; margin-bottom: 15px; text-align: center;">
+                <strong>👤 管理者モード</strong><br>
+                <small>予約済みの時間帯でも強制追加が可能です</small>
+            </div>
+        `;
+        addReservationTimeslotsDiv.appendChild(adminNoticeDiv);
+        
         // 既存の時間スロットボタンを生成
         availableSlots.forEach(time => {
             const timeSlotBtn = document.createElement('button');
@@ -186,15 +198,42 @@ async function displayAvailableTimeSlots(date) {
             timeSlotBtn.textContent = time;
             timeSlotBtn.type = 'button';
             
-            // 既に予約がある時間は無効化
-            const isBooked = dayReservations.some(r => r.Time === time);
+            // 既に予約がある時間をチェック
+            const existingReservation = dayReservations.find(r => r.Time === time);
+            const isBooked = !!existingReservation;
             
             if (isBooked) {
-                timeSlotBtn.classList.add('disabled');
-                timeSlotBtn.disabled = true;
-                timeSlotBtn.textContent += ' (予約済み)';
+                // 予約済みでも管理者は選択可能（見た目を変更）
+                timeSlotBtn.classList.add('admin-override');
+                timeSlotBtn.style.backgroundColor = '#ffc107'; // 警告色
+                timeSlotBtn.style.borderColor = '#ffc107';
+                timeSlotBtn.style.color = '#000000';
+                
+                // 既存予約の情報を表示
+                const customerName = existingReservation['Name-f'] || '名前なし';
+                const isBlockedTime = existingReservation['Name-f'] === '休止時間';
+                
+                if (isBlockedTime) {
+                    timeSlotBtn.textContent = `${time} (休止中)`;
+                    timeSlotBtn.title = `休止設定: ${existingReservation['Name-s'] || '理由未設定'}`;
+                } else {
+                    timeSlotBtn.textContent = `${time} (${customerName})`;
+                    timeSlotBtn.title = `既存予約: ${customerName} - ${existingReservation.Menu || 'メニュー不明'}`;
+                }
+                
+                // 管理者権限で選択可能
+                timeSlotBtn.addEventListener('click', () => {
+                    const confirmMessage = isBlockedTime ? 
+                        `この時間は休止設定されています。\n時間: ${time}\n理由: ${existingReservation['Name-s']}\n\n管理者権限で強制追加しますか？` :
+                        `この時間は既に予約があります。\n時間: ${time}\nお客様: ${customerName}\nメニュー: ${existingReservation.Menu || '不明'}\n\n管理者権限で重複追加しますか？`;
+                    
+                    if (confirm(confirmMessage)) {
+                        selectTimeSlot(time, timeSlotBtn, false, true); // forceAdd = true
+                    }
+                });
             } else {
-                timeSlotBtn.addEventListener('click', () => selectTimeSlot(time, timeSlotBtn, false));
+                // 空いている時間（通常通り）
+                timeSlotBtn.addEventListener('click', () => selectTimeSlot(time, timeSlotBtn, false, false));
             }
             
             addReservationTimeslotsDiv.appendChild(timeSlotBtn);
@@ -203,7 +242,7 @@ async function displayAvailableTimeSlots(date) {
         // カスタム時間ボタンを追加
         const customTimeBtn = document.createElement('button');
         customTimeBtn.className = 'time-slot-btn custom-time-btn';
-        customTimeBtn.textContent = 'カスタム';
+        customTimeBtn.textContent = 'カスタム時間';
         customTimeBtn.type = 'button';
         // 他の時刻ボタンと同じスタイルにする
         customTimeBtn.style.backgroundColor = '#4a4a4a';
@@ -214,31 +253,44 @@ async function displayAvailableTimeSlots(date) {
         customTimeBtn.addEventListener('click', () => openCustomTimeModal(dayReservations));
         addReservationTimeslotsDiv.appendChild(customTimeBtn);
         
+        // 管理者権限の説明を追加
+        const adminExplanationDiv = document.createElement('div');
+        adminExplanationDiv.innerHTML = `
+            <div style="background-color: #343a40; color: #ffffff; padding: 10px; border-radius: 6px; margin-top: 15px; font-size: 13px;">
+                <strong>管理者権限について：</strong><br>
+                • <span style="color: #ffc107;">黄色のボタン</span>: 予約済み/休止中でも強制追加可能<br>
+                • 重複予約や休止時間への追加も可能です<br>
+                • お客様への連絡は必ず行ってください
+            </div>
+        `;
+        addReservationTimeslotsDiv.appendChild(adminExplanationDiv);
+        
     } catch (error) {
         console.error('Error loading time slots:', error);
         addReservationTimeslotsDiv.innerHTML = '<div style="color: #dc3545; text-align: center; padding: 20px;">時間スロットの取得に失敗しました</div>';
     }
 }
 
-// カスタム時間入力モーダルを開く
+// カスタム時間入力モーダルを開く（管理者権限対応版）
 function openCustomTimeModal(dayReservations) {
     const modalHTML = `
         <div id="custom-time-modal" class="modal active">
             <div class="modal-content">
-                <h3>カスタム時間入力</h3>
+                <h3>カスタム時間入力（管理者権限）</h3>
                 <div class="custom-time-form">
                     <div class="form-group">
                         <label for="custom-time-input">予約時間を入力してください（HH:MM形式）</label>
-                        <input type="time" id="custom-time-input" min="08:00" max="19:00">
+                        <input type="time" id="custom-time-input" min="00:00" max="23:59">
                     </div>
                     
                     <div class="custom-time-notes">
-                        <h4>⚠️ カスタム時間の注意事項</h4>
+                        <h4>⚠️ 管理者権限でのカスタム時間</h4>
                         <ul>
-                            <li>営業時間内（8:00〜19:00）で設定してください</li>
-                            <li>既存の予約と重複しないように確認してください</li>
+                            <li>営業時間外（8:00〜19:00外）でも設定可能です</li>
+                            <li>既存予約と重複していても強制追加できます</li>
                             <li>1分単位で設定可能です</li>
-                            <li>お客様への確認を忘れずに行ってください</li>
+                            <li>お客様への確認を必ず行ってください</li>
+                            <li>特別対応として記録されます</li>
                         </ul>
                     </div>
                     
@@ -246,9 +298,13 @@ function openCustomTimeModal(dayReservations) {
                         <h4>📅 この日の既存予約</h4>
                         <div id="existing-reservations-list" class="existing-list">
                             ${dayReservations.length > 0 ? 
-                                dayReservations.map(r => 
-                                    `<div class="existing-item">${r.Time} - ${r['Name-f'] || '名前なし'} (${r.Menu || 'メニューなし'})</div>`
-                                ).join('') :
+                                dayReservations.map(r => {
+                                    const customerName = r['Name-f'] || '名前なし';
+                                    const menuName = r.Menu || 'メニューなし';
+                                    const isBlocked = customerName === '休止時間';
+                                    
+                                    return `<div class="existing-item ${isBlocked ? 'blocked-time' : ''}">${r.Time} - ${customerName} (${menuName})</div>`;
+                                }).join('') :
                                 '<div class="existing-item no-reservations">この日は予約がありません</div>'
                             }
                         </div>
@@ -277,24 +333,19 @@ function openCustomTimeModal(dayReservations) {
     const confirmBtn = document.getElementById('confirm-custom-time-btn');
     const cancelBtn = document.getElementById('cancel-custom-time-btn');
     
-    // 現在時刻を初期値として設定（営業時間内の場合）
+    // 現在時刻を初期値として設定
     const now = new Date();
     const currentHour = now.getHours();
     const currentMinute = now.getMinutes();
-    
-    if (currentHour >= 8 && currentHour < 19) {
-        const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
-        customTimeInput.value = timeString;
-    } else {
-        customTimeInput.value = '10:00'; // デフォルト値
-    }
+    const timeString = `${String(currentHour).padStart(2, '0')}:${String(currentMinute).padStart(2, '0')}`;
+    customTimeInput.value = timeString;
     
     // 確認ボタンのイベントリスナー
     if (confirmBtn) {
         confirmBtn.addEventListener('click', function() {
             const customTime = customTimeInput.value;
-            if (validateCustomTime(customTime, dayReservations)) {
-                selectTimeSlot(customTime, null, true);
+            if (validateCustomTimeAdmin(customTime, dayReservations)) {
+                selectTimeSlot(customTime, null, true, forceAddMode);
                 closeCustomTimeModal();
             }
         });
@@ -321,8 +372,8 @@ function openCustomTimeModal(dayReservations) {
     }
 }
 
-// カスタム時間のバリデーション
-function validateCustomTime(timeString, dayReservations) {
+// カスタム時間のバリデーション（管理者版 - 制限を緩和）
+function validateCustomTimeAdmin(timeString, dayReservations) {
     if (!timeString) {
         alert('時間を入力してください。');
         return false;
@@ -335,23 +386,34 @@ function validateCustomTime(timeString, dayReservations) {
         return false;
     }
     
-    // 営業時間のチェック
+    // 営業時間外の警告（管理者は強制可能）
     const [hours, minutes] = timeString.split(':').map(Number);
     const timeInMinutes = hours * 60 + minutes;
     const startTime = 8 * 60; // 8:00
     const endTime = 19 * 60;  // 19:00
     
     if (timeInMinutes < startTime || timeInMinutes >= endTime) {
-        alert('営業時間（8:00〜19:00）内で設定してください。');
-        return false;
+        const confirmMessage = `営業時間外（${timeString}）ですが、管理者権限で設定しますか？\n\n注意：\n• お客様への特別な連絡が必要です\n• 営業時間外対応として記録されます`;
+        if (!confirm(confirmMessage)) {
+            return false;
+        }
+        forceAddMode = true;
     }
     
-    // 既存予約との重複チェック
-    const isConflict = dayReservations.some(r => r.Time === timeString);
-    if (isConflict) {
-        const conflictReservation = dayReservations.find(r => r.Time === timeString);
-        alert(`この時間は既に予約があります。\n${timeString} - ${conflictReservation['Name-f'] || '名前なし'} (${conflictReservation.Menu || 'メニューなし'})`);
-        return false;
+    // 既存予約との重複チェック（管理者は強制可能）
+    const conflictReservation = dayReservations.find(r => r.Time === timeString);
+    if (conflictReservation) {
+        const customerName = conflictReservation['Name-f'] || '名前なし';
+        const isBlocked = customerName === '休止時間';
+        
+        const conflictMessage = isBlocked ?
+            `この時間は休止設定されています。\n${timeString} - ${conflictReservation['Name-s'] || '理由なし'}\n\n管理者権限で強制追加しますか？` :
+            `この時間は既に予約があります。\n${timeString} - ${customerName} (${conflictReservation.Menu || 'メニューなし'})\n\n管理者権限で重複追加しますか？`;
+        
+        if (!confirm(conflictMessage)) {
+            return false;
+        }
+        forceAddMode = true;
     }
     
     return true;
@@ -365,8 +427,8 @@ function closeCustomTimeModal() {
     }
 }
 
-// 時間スロットを選択（カスタム時間対応版）
-function selectTimeSlot(time, buttonElement, isCustom = false) {
+// 時間スロットを選択（管理者強制追加対応版）
+function selectTimeSlot(time, buttonElement, isCustom = false, forceAdd = false) {
     // 既存の選択を解除
     const allTimeSlotBtns = addReservationTimeslotsDiv.querySelectorAll('.time-slot-btn');
     allTimeSlotBtns.forEach(btn => btn.classList.remove('selected'));
@@ -378,6 +440,7 @@ function selectTimeSlot(time, buttonElement, isCustom = false) {
     
     selectedTimeSlot = time;
     isCustomTime = isCustom;
+    forceAddMode = forceAdd;
     
     // カスタム時間の場合は視覚的な表示を更新
     if (isCustom) {
@@ -393,7 +456,16 @@ function selectTimeSlot(time, buttonElement, isCustom = false) {
         // 確認メッセージを表示（ボタンの下に配置）
         const confirmationDiv = document.createElement('div');
         confirmationDiv.className = 'custom-time-confirmation';
-        confirmationDiv.innerHTML = `✅ カスタム時間 ${time} が選択されました`;
+        confirmationDiv.innerHTML = forceAdd ? 
+            `⚠️ 強制追加: カスタム時間 ${time} が選択されました` :
+            `✅ カスタム時間 ${time} が選択されました`;
+        
+        // 強制追加の場合は色を変更
+        if (forceAdd) {
+            confirmationDiv.style.backgroundColor = 'rgba(255, 193, 7, 0.2)';
+            confirmationDiv.style.borderColor = '#ffc107';
+            confirmationDiv.style.color = '#ffc107';
+        }
         
         // 既存の確認メッセージがある場合は削除
         const existingConfirmation = addReservationTimeslotsDiv.querySelector('.custom-time-confirmation');
@@ -412,11 +484,37 @@ function selectTimeSlot(time, buttonElement, isCustom = false) {
         // カスタムボタンの表示をリセット
         const customBtn = addReservationTimeslotsDiv.querySelector('.custom-time-btn');
         if (customBtn) {
-            customBtn.textContent = 'カスタム';
+            customBtn.textContent = 'カスタム時間';
             customBtn.style.backgroundColor = '#4a4a4a';
             customBtn.style.borderColor = '#555';
             customBtn.style.color = '#ffffff';
             customBtn.style.fontWeight = 'normal';
+        }
+        
+        // 強制追加の場合の確認メッセージ
+        if (forceAdd) {
+            const forceConfirmationDiv = document.createElement('div');
+            forceConfirmationDiv.className = 'force-add-confirmation';
+            forceConfirmationDiv.innerHTML = `⚠️ 管理者権限で強制追加: ${time}`;
+            forceConfirmationDiv.style.cssText = `
+                background-color: rgba(255, 193, 7, 0.2);
+                border: 2px solid #ffc107;
+                border-radius: 8px;
+                padding: 12px;
+                margin-top: 15px;
+                text-align: center;
+                color: #ffc107;
+                font-weight: bold;
+                animation: fadeInScale 0.5s ease-out;
+            `;
+            
+            // 既存の強制追加確認メッセージがある場合は削除
+            const existingForceConfirmation = addReservationTimeslotsDiv.querySelector('.force-add-confirmation');
+            if (existingForceConfirmation) {
+                existingForceConfirmation.remove();
+            }
+            
+            addReservationTimeslotsDiv.appendChild(forceConfirmationDiv);
         }
     }
 }
@@ -442,7 +540,7 @@ function generateReservationNumber() {
     return Math.floor(Math.random() * 90000000) + 10000000;
 }
 
-// 予約追加処理（統一APIエンドポイント対応版）
+// 予約追加処理（管理者強制追加対応版）
 async function handleAddReservation() {
     // フォームの値を取得
     const date = addReservationDateInput ? addReservationDateInput.value : '';
@@ -475,9 +573,17 @@ async function handleAddReservation() {
         return;
     }
     
-    // カスタム時間の場合の追加確認
-    if (isCustomTime) {
-        const confirmMessage = `カスタム時間 ${selectedTimeSlot} で予約を追加しますか？\n\n⚠️ 注意：\n• 通常の時間スロット外です\n• お客様への連絡を忘れずに行ってください\n• 必要に応じて確認メールを送信してください`;
+    // 最終確認（管理者強制追加の場合）
+    if (forceAddMode || isCustomTime) {
+        let confirmMessage = '';
+        
+        if (forceAddMode && isCustomTime) {
+            confirmMessage = `管理者権限でカスタム時間に強制追加します。\n\n時間: ${selectedTimeSlot}\nお客様: ${name}\nメニュー: ${menuName}\n\n⚠️ 重要事項:\n• 既存予約との重複または営業時間外です\n• お客様への連絡は必須です\n• 特別対応として記録されます\n\n追加しますか？`;
+        } else if (forceAddMode) {
+            confirmMessage = `管理者権限で強制追加します。\n\n時間: ${selectedTimeSlot}\nお客様: ${name}\nメニュー: ${menuName}\n\n⚠️ この時間は既に予約があります\n• お客様への連絡をお忘れなく\n• 重複予約として記録されます\n\n追加しますか？`;
+        } else if (isCustomTime) {
+            confirmMessage = `カスタム時間で予約を追加しますか？\n\n時間: ${selectedTimeSlot}\nお客様: ${name}\nメニュー: ${menuName}\n\n⚠️ 注意：\n• 通常の時間スロット外です\n• お客様への連絡を忘れずに行ってください`;
+        }
         
         if (!confirm(confirmMessage)) {
             return;
@@ -494,20 +600,50 @@ async function handleAddReservation() {
         // まず予約番号の重複をチェック
         const reservationNumber = generateReservationNumber();
         
+        // メール欄に管理者追加情報を設定
+        let mailField = email || '管理者追加';
+        if (forceAddMode && isCustomTime) {
+            mailField = email || '管理者強制追加（カスタム時間）';
+        } else if (forceAddMode) {
+            mailField = email || '管理者強制追加（重複時間）';
+        } else if (isCustomTime) {
+            mailField = email || '管理者追加（カスタム時間）';
+        }
+        
+        // 電話番号欄の設定（管理者追加情報を含む）
+        let phoneField = phone;
+        if (!phone) {
+            if (forceAddMode && isCustomTime) {
+                phoneField = '管理者強制追加（カスタム時間・重複）';
+            } else if (forceAddMode) {
+                phoneField = '管理者強制追加（重複時間）';
+            } else if (isCustomTime) {
+                phoneField = '管理者追加（カスタム時間）';
+            } else {
+                phoneField = '管理者追加';
+            }
+        }
+        
         // 予約データを作成（統一されたAPIフォーマット）
         const reservationData = {
             reservationNumber: reservationNumber,
             Menu: menuName,
             "Name-f": name,
-            "Name-s": phone || (isCustomTime ? '管理者追加（カスタム時間）' : '管理者追加（電話番号なし）'),
+            "Name-s": phoneField,
             Time: selectedTimeSlot,
             WorkTime: selectedMenu.worktime,
             date: date,
-            mail: email || (isCustomTime ? 'カスタム時間予約' : '管理者追加'),
-            states: 0
+            mail: mailField,
+            states: 0,
+            // 管理者追加のメタデータを追加
+            adminAdded: true,
+            forceAdd: forceAddMode,
+            customTime: isCustomTime,
+            addedAt: new Date().toISOString()
         };
         
         console.log('予約データ:', reservationData);
+        console.log('管理者強制追加フラグ:', forceAddMode);
         console.log('カスタム時間フラグ:', isCustomTime);
         console.log('使用するAPIエンドポイント:', API_BASE_URL);
         
@@ -551,10 +687,16 @@ async function handleAddReservation() {
             throw new Error(result.message || '予約の追加に失敗しました');
         }
         
-        // 成功時の処理
-        const successMessage = isCustomTime ? 
-            `カスタム時間での予約を追加しました。\n予約番号: ${reservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n⚠️ お客様への連絡をお忘れなく！` :
-            `予約を追加しました。\n予約番号: ${reservationData.reservationNumber}`;
+        // 成功時のメッセージ生成
+        let successMessage = `予約を追加しました。\n予約番号: ${reservationData.reservationNumber}`;
+        
+        if (forceAddMode && isCustomTime) {
+            successMessage = `⚠️ 管理者権限で強制追加しました（カスタム時間・重複）\n予約番号: ${reservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n重要: お客様への特別な連絡が必要です！`;
+        } else if (forceAddMode) {
+            successMessage = `⚠️ 管理者権限で強制追加しました（重複時間）\n予約番号: ${reservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n注意: 既存予約との重複があります！`;
+        } else if (isCustomTime) {
+            successMessage = `✅ カスタム時間で予約を追加しました\n予約番号: ${reservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n⚠️ お客様への連絡をお忘れなく！`;
+        }
         
         alert(successMessage);
         
@@ -586,9 +728,15 @@ async function handleAddReservation() {
             // デモ用のローカル処理を実行
             console.log('APIが利用できないため、ローカルデモモードで実行します');
             
-            const demoMessage = isCustomTime ?
-                `APIサーバーに接続できませんが、デモ用にカスタム時間（${selectedTimeSlot}）でローカル予約を追加しますか？\n（実際のデータベースには保存されません）` :
-                `APIサーバーに接続できませんが、デモ用にローカルで予約を追加しますか？\n（実際のデータベースには保存されません）`;
+            let demoMessage = 'APIサーバーに接続できませんが、デモ用にローカルで予約を追加しますか？\n（実際のデータベースには保存されません）';
+            
+            if (forceAddMode && isCustomTime) {
+                demoMessage = `APIサーバーに接続できませんが、デモ用に管理者強制追加（カスタム時間・重複: ${selectedTimeSlot}）でローカル予約を追加しますか？\n（実際のデータベースには保存されません）`;
+            } else if (forceAddMode) {
+                demoMessage = `APIサーバーに接続できませんが、デモ用に管理者強制追加（重複時間: ${selectedTimeSlot}）でローカル予約を追加しますか？\n（実際のデータベースには保存されません）`;
+            } else if (isCustomTime) {
+                demoMessage = `APIサーバーに接続できませんが、デモ用にカスタム時間（${selectedTimeSlot}）でローカル予約を追加しますか？\n（実際のデータベースには保存されません）`;
+            }
             
             if (confirm(demoMessage)) {
                 try {
@@ -598,12 +746,15 @@ async function handleAddReservation() {
                         reservationNumber: generateReservationNumber(),
                         Menu: menuName,
                         "Name-f": name,
-                        "Name-s": phone || (isCustomTime ? '管理者追加（カスタム時間）' : '管理者追加（電話番号なし）'),
+                        "Name-s": phoneField,
                         Time: selectedTimeSlot,
                         WorkTime: selectedMenu.worktime,
                         date: date,
-                        mail: email || (isCustomTime ? 'カスタム時間予約' : '管理者追加'),
-                        states: 0
+                        mail: mailField,
+                        states: 0,
+                        adminAdded: true,
+                        forceAdd: forceAddMode,
+                        customTime: isCustomTime
                     };
                     
                     // グローバルのreservations配列に追加
@@ -611,9 +762,15 @@ async function handleAddReservation() {
                         reservations.push(localReservationData);
                     }
                     
-                    const demoSuccessMessage = isCustomTime ?
-                        `デモ用カスタム時間予約を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n※これはデモ用です。実際のデータベースには保存されていません。` :
-                        `デモ用予約を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n\n※これはデモ用です。実際のデータベースには保存されていません。`;
+                    let demoSuccessMessage = `デモ用予約を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n\n※これはデモ用です。実際のデータベースには保存されていません。`;
+                    
+                    if (forceAddMode && isCustomTime) {
+                        demoSuccessMessage = `デモ用管理者強制追加（カスタム時間・重複）を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n※これはデモ用です。`;
+                    } else if (forceAddMode) {
+                        demoSuccessMessage = `デモ用管理者強制追加（重複時間）を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n※これはデモ用です。`;
+                    } else if (isCustomTime) {
+                        demoSuccessMessage = `デモ用カスタム時間予約を追加しました。\n予約番号: ${localReservationData.reservationNumber}\n時間: ${selectedTimeSlot}\n\n※これはデモ用です。`;
+                    }
                     
                     alert(demoSuccessMessage);
                     
@@ -641,9 +798,13 @@ async function handleAddReservation() {
         }
         
         // エラーメッセージの表示
-        let errorMessage = isCustomTime ? 
-            'カスタム時間での予約追加に失敗しました。' :
-            '予約の追加に失敗しました。';
+        let errorMessage = '予約の追加に失敗しました。';
+        
+        if (forceAddMode) {
+            errorMessage = '管理者強制追加に失敗しました。';
+        } else if (isCustomTime) {
+            errorMessage = 'カスタム時間での予約追加に失敗しました。';
+        }
         
         if (error.message.includes('Unexpected token') || error.message.includes('<!doctype')) {
             errorMessage = 'APIサーバーに接続できません。\n\n考えられる原因：\n• APIエンドポイントが正しくない\n• CORS設定の問題\n• サーバーがダウンしている\n\nシステム管理者にお問い合わせください。';
@@ -654,7 +815,7 @@ async function handleAddReservation() {
         } else if (error.message.includes('500')) {
             errorMessage = 'サーバーエラーが発生しました。\nしばらく時間をおいてから再度お試しください。';
         } else if (error.message.includes('already exists') || error.message.includes('重複')) {
-            errorMessage = 'この時間は既に予約が入っています。\n別の時間を選択してください。';
+            errorMessage = 'この時間は既に予約が入っています。\n管理者権限でも重複エラーが発生しました。';
         } else if (error.message.includes('holiday') || error.message.includes('休業日')) {
             errorMessage = 'この日は休業日のため予約できません。';
         } else if (error.message) {
@@ -669,6 +830,7 @@ async function handleAddReservation() {
             stack: error.stack,
             timestamp: new Date().toISOString(),
             isCustomTime: isCustomTime,
+            forceAddMode: forceAddMode,
             selectedTime: selectedTimeSlot,
             apiEndpoint: API_BASE_URL,
             reservationData: {
