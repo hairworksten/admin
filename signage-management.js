@@ -1,10 +1,12 @@
-// デジタルサイネージ管理機能 - 修正版
+// デジタルサイネージ管理機能 - 変数重複エラー修正版
 
-// グローバル変数
-let customSettings = {
-    message: '',
-    news: true
-};
+// グローバル変数（auth.jsで定義済みの場合は使用、未定義の場合は初期化）
+if (typeof window.customSettings === 'undefined') {
+    window.customSettings = {
+        message: '',
+        news: true
+    };
+}
 
 // 初期化フラグ
 let signageManagementInitialized = false;
@@ -39,7 +41,7 @@ function initializeSignageManagement() {
     setupEventDelegation();
     
     // 初期データ読み込み
-    loadCustomSettings();
+    loadCustomSettingsLocal();
     
     signageManagementInitialized = true;
     console.log('[サイネージ管理] 初期化完了');
@@ -111,8 +113,8 @@ function applyTemplate(template) {
     }
 }
 
-// カスタム設定を読み込み
-async function loadCustomSettings() {
+// カスタム設定を読み込み（ローカル版）
+async function loadCustomSettingsLocal() {
     console.log('[サイネージ管理] カスタム設定読み込み開始');
     
     try {
@@ -133,12 +135,13 @@ async function loadCustomSettings() {
         console.log('[サイネージ管理] API応答:', data);
         
         if (data.success) {
-            customSettings = {
+            // グローバルのcustomSettingsを更新
+            window.customSettings = {
                 message: data.message || '',
                 news: data.news !== undefined ? data.news : true
             };
             
-            console.log('[サイネージ管理] カスタム設定更新:', customSettings);
+            console.log('[サイネージ管理] カスタム設定更新:', window.customSettings);
             updateSignageUI();
         } else {
             console.warn('[サイネージ管理] カスタム設定の読み込みに失敗:', data.error);
@@ -153,15 +156,15 @@ async function loadCustomSettings() {
 
 // サイネージUIを更新
 function updateSignageUI() {
-    console.log('[サイネージ管理] UI更新開始:', customSettings);
+    console.log('[サイネージ管理] UI更新開始:', window.customSettings);
     
     // カスタムメッセージ表示更新
     const currentCustomMessageSpan = document.getElementById('current-custom-message');
     if (currentCustomMessageSpan) {
-        const messageText = customSettings.message || '設定されていません';
+        const messageText = window.customSettings.message || '設定されていません';
         currentCustomMessageSpan.textContent = messageText;
-        currentCustomMessageSpan.style.color = customSettings.message ? '#ffffff' : '#888';
-        currentCustomMessageSpan.style.fontStyle = customSettings.message ? 'normal' : 'italic';
+        currentCustomMessageSpan.style.color = window.customSettings.message ? '#ffffff' : '#888';
+        currentCustomMessageSpan.style.fontStyle = window.customSettings.message ? 'normal' : 'italic';
         console.log('[サイネージ管理] カスタムメッセージ表示更新:', messageText);
     } else {
         console.warn('[サイネージ管理] current-custom-message要素が見つかりません');
@@ -170,9 +173,9 @@ function updateSignageUI() {
     // ニュース表示ステータス更新
     const currentNewsStatusSpan = document.getElementById('current-news-status');
     if (currentNewsStatusSpan) {
-        const statusText = customSettings.news ? 'ON' : 'OFF';
+        const statusText = window.customSettings.news ? 'ON' : 'OFF';
         currentNewsStatusSpan.textContent = statusText;
-        currentNewsStatusSpan.style.color = customSettings.news ? '#28a745' : '#dc3545';
+        currentNewsStatusSpan.style.color = window.customSettings.news ? '#28a745' : '#dc3545';
         currentNewsStatusSpan.style.fontWeight = 'bold';
         console.log('[サイネージ管理] ニュース表示ステータス更新:', statusText);
     } else {
@@ -182,8 +185,8 @@ function updateSignageUI() {
     // ニュース表示ボタンのテキスト更新
     const toggleNewsDisplayBtn = document.getElementById('toggle-news-display-btn');
     if (toggleNewsDisplayBtn) {
-        toggleNewsDisplayBtn.textContent = customSettings.news ? 'ニュース非表示' : 'ニュース表示';
-        toggleNewsDisplayBtn.className = customSettings.news ? 'btn btn-warning' : 'btn btn-success';
+        toggleNewsDisplayBtn.textContent = window.customSettings.news ? 'ニュース非表示' : 'ニュース表示';
+        toggleNewsDisplayBtn.className = window.customSettings.news ? 'btn btn-warning' : 'btn btn-success';
         console.log('[サイネージ管理] ニュース表示ボタン更新:', toggleNewsDisplayBtn.textContent);
     } else {
         console.warn('[サイネージ管理] toggle-news-display-btn要素が見つかりません');
@@ -198,7 +201,7 @@ function openCustomMessageModal() {
     
     // 現在のメッセージをフォームに設定
     if (elements.customMessageInput) {
-        elements.customMessageInput.value = customSettings.message || '';
+        elements.customMessageInput.value = window.customSettings.message || '';
         // フォーカスは少し遅延させる
         setTimeout(() => {
             if (elements.customMessageInput) {
@@ -269,7 +272,7 @@ async function handleUpdateCustomMessage() {
         console.log('[サイネージ管理] API応答:', data);
         
         if (data.success) {
-            customSettings.message = newMessage;
+            window.customSettings.message = newMessage;
             updateSignageUI();
             closeCustomMessageModal();
             
@@ -298,7 +301,7 @@ async function handleUpdateCustomMessage() {
 async function toggleNewsDisplay() {
     console.log('[サイネージ管理] ニュース表示切り替え処理開始');
     
-    const newNewsStatus = !customSettings.news;
+    const newNewsStatus = !window.customSettings.news;
     console.log('[サイネージ管理] 新しいニュース表示状態:', newNewsStatus);
     
     // 確認ダイアログ
@@ -336,7 +339,7 @@ async function toggleNewsDisplay() {
         console.log('[サイネージ管理] API応答:', data);
         
         if (data.success) {
-            customSettings.news = newNewsStatus;
+            window.customSettings.news = newNewsStatus;
             updateSignageUI();
             
             alert(`ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしました。`);
@@ -359,7 +362,7 @@ async function toggleNewsDisplay() {
 // リアルタイム更新処理（外部から呼び出される）
 function handleCustomMessageUpdate(data) {
     if (data && data.message !== undefined) {
-        customSettings.message = data.message;
+        window.customSettings.message = data.message;
         updateSignageUI();
         console.log('[サイネージ管理] リアルタイム更新 - カスタムメッセージ:', data.message);
     }
@@ -367,7 +370,7 @@ function handleCustomMessageUpdate(data) {
 
 function handleNewsDisplayUpdate(data) {
     if (data && data.news !== undefined) {
-        customSettings.news = data.news;
+        window.customSettings.news = data.news;
         updateSignageUI();
         console.log('[サイネージ管理] リアルタイム更新 - ニュース表示:', data.news);
     }
@@ -382,5 +385,5 @@ function updateSignageUIFromAuth() {
 // グローバル関数として公開
 window.handleCustomMessageUpdate = handleCustomMessageUpdate;
 window.handleNewsDisplayUpdate = handleNewsDisplayUpdate;
-window.loadCustomSettings = loadCustomSettings;
+window.loadCustomSettingsLocal = loadCustomSettingsLocal;
 window.updateSignageUIFromAuth = updateSignageUIFromAuth;
