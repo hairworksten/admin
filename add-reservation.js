@@ -81,16 +81,28 @@ function openAddReservationModal() {
     
     // 管理者は日付制限を完全に撤廃
     if (addReservationDateInput) {
-        addReservationDateInput.removeAttribute('min'); // 最小日付制限を撤廃
-        addReservationDateInput.removeAttribute('max'); // 最大日付制限も撤廃
-        addReservationDateInput.value = '';
+        // 属性を完全に削除
+        addReservationDateInput.removeAttribute('min');
+        addReservationDateInput.removeAttribute('max');
+        
+        // ブラウザの制限を回避するため、動的に極端な範囲を設定
+        const farPast = '1900-01-01';
+        const farFuture = '2099-12-31';
+        addReservationDateInput.setAttribute('min', farPast);
+        addReservationDateInput.setAttribute('max', farFuture);
         
         // 今日の日付をデフォルト値として設定
         const today = new Date();
         const todayString = today.toISOString().split('T')[0];
         addReservationDateInput.value = todayString;
+        
+        // カスタム検証を無効化
+        addReservationDateInput.setCustomValidity('');
+        
+        console.log('管理者モード: 日付制限を撤廃し、範囲を1900-2099に設定');
     }
     
+    // 管理者権限の表示
     if (addReservationModal) {
         addReservationModal.classList.add('active');
     }
@@ -543,6 +555,12 @@ function generateReservationNumber() {
 
 // 予約追加処理（管理者強制追加対応版）
 async function handleAddReservation() {
+    // ブラウザの標準検証を無効化（管理者権限）
+    const form = addReservationModal.querySelector('form');
+    if (form) {
+        form.noValidate = true;
+    }
+    
     // フォームの値を取得
     const date = addReservationDateInput ? addReservationDateInput.value : '';
     const name = addReservationNameInput ? addReservationNameInput.value.trim() : '';
@@ -550,9 +568,25 @@ async function handleAddReservation() {
     const email = addReservationEmailInput ? addReservationEmailInput.value.trim() : '';
     const menuName = addReservationMenuSelect ? addReservationMenuSelect.value : '';
     
+    console.log('フォーム値確認:', {
+        date: date,
+        name: name,
+        phone: phone,
+        email: email,
+        menuName: menuName,
+        selectedTimeSlot: selectedTimeSlot
+    });
+    
     // バリデーション
     if (!date || !name || !menuName || !selectedTimeSlot) {
         alert('必須項目をすべて入力してください。\n（電話番号・メールアドレスは任意です）');
+        return;
+    }
+    
+    // 日付形式チェック（管理者権限でも最低限は必要）
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(date)) {
+        alert('日付の形式が正しくありません（YYYY-MM-DD形式で入力してください）');
         return;
     }
     
@@ -574,16 +608,33 @@ async function handleAddReservation() {
         return;
     }
     
+    // 過去日・当日のチェック（管理者権限での警告のみ）
+    const selectedDate = new Date(date + 'T00:00:00');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    if (selectedDate < today) {
+        if (!confirm(`過去の日付（${date}）に予約を追加します。\n管理者権限で実行しますか？`)) {
+            return;
+        }
+        forceAddMode = true;
+    } else if (selectedDate.toDateString() === today.toDateString()) {
+        if (!confirm(`本日（${date}）に予約を追加します。\n管理者権限で実行しますか？`)) {
+            return;
+        }
+        forceAddMode = true;
+    }
+    
     // 最終確認（管理者強制追加の場合）
     if (forceAddMode || isCustomTime) {
         let confirmMessage = '';
         
         if (forceAddMode && isCustomTime) {
-            confirmMessage = `管理者権限でカスタム時間に強制追加します。\n\n時間: ${selectedTimeSlot}\nお客様: ${name}\nメニュー: ${menuName}\n\n⚠️ 重要事項:\n• 既存予約との重複または営業時間外です\n• お客様への連絡は必須です\n• 特別対応として記録されます\n\n追加しますか？`;
+            confirmMessage = `管理者権限でカスタム時間に強制追加します。\n\n時間: ${selectedTimeSlot}\nお客様: ${name}\nメニュー: ${menuName}\n日付: ${date}\n\n⚠️ 重要事項:\n• 既存予約との重複または営業時間外です\n• お客様への連絡は必須です\n• 特別対応として記録されます\n\n追加しますか？`;
         } else if (forceAddMode) {
-            confirmMessage = `管理者権限で強制追加します。\n\n時間: ${selectedTimeSlot}\nお客様: ${name}\nメニュー: ${menuName}\n\n⚠️ この時間は既に予約があります\n• お客様への連絡をお忘れなく\n• 重複予約として記録されます\n\n追加しますか？`;
+            confirmMessage = `管理者権限で強制追加します。\n\n時間: ${selectedTimeSlot}\nお客様: ${name}\nメニュー: ${menuName}\n日付: ${date}\n\n⚠️ この時間は既に予約があるか、過去日・当日です\n• お客様への連絡をお忘れなく\n• 重複予約または特別対応として記録されます\n\n追加しますか？`;
         } else if (isCustomTime) {
-            confirmMessage = `カスタム時間で予約を追加しますか？\n\n時間: ${selectedTimeSlot}\nお客様: ${name}\nメニュー: ${menuName}\n\n⚠️ 注意：\n• 通常の時間スロット外です\n• お客様への連絡を忘れずに行ってください`;
+            confirmMessage = `カスタム時間で予約を追加しますか？\n\n時間: ${selectedTimeSlot}\nお客様: ${name}\nメニュー: ${menuName}\n日付: ${date}\n\n⚠️ 注意：\n• 通常の時間スロット外です\n• お客様への連絡を忘れずに行ってください`;
         }
         
         if (!confirm(confirmMessage)) {
