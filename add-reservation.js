@@ -79,15 +79,16 @@ function openAddReservationModal() {
     // メニューオプションを設定
     populateMenuOptions();
     
-    // 管理者は過去日・当日からでも選択可能にする
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1); // 昨日から選択可能（管理者権限）
-    const yesterdayString = yesterday.toISOString().split('T')[0];
-    
+    // 管理者は日付制限を完全に撤廃
     if (addReservationDateInput) {
-        addReservationDateInput.min = yesterdayString; // 昨日から選択可能
+        addReservationDateInput.removeAttribute('min'); // 最小日付制限を撤廃
+        addReservationDateInput.removeAttribute('max'); // 最大日付制限も撤廃
         addReservationDateInput.value = '';
+        
+        // 今日の日付をデフォルト値として設定
+        const today = new Date();
+        const todayString = today.toISOString().split('T')[0];
+        addReservationDateInput.value = todayString;
     }
     
     if (addReservationModal) {
@@ -647,14 +648,35 @@ async function handleAddReservation() {
         console.log('カスタム時間フラグ:', isCustomTime);
         console.log('使用するAPIエンドポイント:', API_BASE_URL);
         
-        // 統一されたAPIエンドポイントを使用
-        const response = await fetch(`${API_BASE_URL}/reservations`, {
+        // 管理者権限での追加の場合、専用エンドポイントを試行
+        let apiEndpoint = `${API_BASE_URL}/reservations`;
+        if (forceAddMode || isCustomTime) {
+            // 管理者専用エンドポイントがある場合はそちらを使用
+            apiEndpoint = `${API_BASE_URL}/admin/reservations`;
+        }
+        
+        console.log('使用するエンドポイント:', apiEndpoint);
+        
+        // 統一されたAPIエンドポイントを使用（管理者権限ヘッダー追加）
+        const response = await fetch(apiEndpoint, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Accept': 'application/json'
+                'Accept': 'application/json',
+                'X-Admin-Override': 'true', // 管理者権限フラグ
+                'X-Force-Add': forceAddMode ? 'true' : 'false', // 強制追加フラグ
+                'X-Custom-Time': isCustomTime ? 'true' : 'false', // カスタム時間フラグ
+                'X-Admin-User': currentUser || 'admin' // 管理者ユーザー情報
             },
-            body: JSON.stringify(reservationData)
+            body: JSON.stringify({
+                ...reservationData,
+                // リクエストボディにも管理者情報を追加
+                adminOverride: true,
+                forceAdd: forceAddMode,
+                customTime: isCustomTime,
+                bypassDateRestriction: true, // 日付制限を回避
+                bypassTimeRestriction: true  // 時間制限を回避
+            })
         });
         
         console.log('Response status:', response.status);
@@ -679,7 +701,52 @@ async function handleAddReservation() {
         }
         
         if (!response.ok) {
-            throw new Error(result.message || result.error || `HTTP error! status: ${response.status}`);
+            // 管理者専用エンドポイントで失敗した場合、通常エンドポイントで再試行
+            if (apiEndpoint.includes('/admin/') && response.status === 404) {
+                console.log('管理者専用エンドポイントが見つからないため、通常エンドポイントで再試行');
+                
+                const fallbackResponse = await fetch(`${API_BASE_URL}/reservations`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-Admin-Override': 'true',
+                        'X-Force-Add': forceAddMode ? 'true' : 'false',
+                        'X-Custom-Time': isCustomTime ? 'true' : 'false',
+                        'X-Admin-User': currentUser || 'admin'
+                    },
+                    body: JSON.stringify({
+                        ...reservationData,
+                        adminOverride: true,
+                        forceAdd: forceAddMode,
+                        customTime: isCustomTime,
+                        bypassDateRestriction: true,
+                        bypassTimeRestriction: true
+                    })
+                });
+                
+                const fallbackText = await fallbackResponse.text();
+                
+                if (fallbackResponse.ok) {
+                    // フォールバック成功
+                    console.log('フォールバック成功');
+                    try {
+                        result = JSON.parse(fallbackText);
+                    } catch (parseError) {
+                        throw new Error('サーバーから無効なJSON応答が返されました。');
+                    }
+                } else {
+                    // フォールバックも失敗
+                    try {
+                        const fallbackResult = JSON.parse(fallbackText);
+                        throw new Error(fallbackResult.message || fallbackResult.error || `HTTP error! status: ${fallbackResponse.status}`);
+                    } catch (parseError) {
+                        throw new Error(`HTTP error! status: ${fallbackResponse.status}`);
+                    }
+                }
+            } else {
+                throw new Error(result.message || result.error || `HTTP error! status: ${response.status}`);
+            }
         }
         
         // 成功判定
@@ -816,8 +883,10 @@ async function handleAddReservation() {
             errorMessage = 'サーバーエラーが発生しました。\nしばらく時間をおいてから再度お試しください。';
         } else if (error.message.includes('already exists') || error.message.includes('重複')) {
             errorMessage = 'この時間は既に予約が入っています。\n管理者権限でも重複エラーが発生しました。';
-        } else if (error.message.includes('holiday') || error.message.includes('休業日')) {
-            errorMessage = 'この日は休業日のため予約できません。';
+        } else if (error.message.includes('１日後から可能') || error.message.includes('日後から') || error.message.includes('明日から')) {
+            errorMessage = `サーバー側の日付制限が有効になっています。\n\n対処方法:\n• サーバー管理者に管理者権限の設定を依頼\n• APIの日付制限設定を確認\n• 管理者専用エンドポイントの有効化を確認\n\n詳細: ${error.message}`;
+        } else if (error.message.includes('時間外') || error.message.includes('営業時間')) {
+            errorMessage = `営業時間の制限が有効になっています。\n\n管理者権限での時間外予約には以下が必要:\n• サーバー側での管理者権限設定\n• 時間制限の回避設定\n\n詳細: ${error.message}`;
         } else if (error.message) {
             errorMessage += '\n\n詳細: ' + error.message;
         }
