@@ -414,7 +414,7 @@ function generateReservationNumber() {
     return Math.floor(Math.random() * 90000000) + 10000000;
 }
 
-// 予約追加処理（元のhandleAddReservation関数をそのまま使用）
+// 予約追加処理（修正版）
 async function handleAddReservation() {
     console.log('[予約追加] 予約追加処理開始');
     
@@ -508,7 +508,7 @@ async function handleAddReservation() {
         
         console.log('[予約追加] 予約データ:', reservationData);
         
-        // API呼び出し
+        // API呼び出し（修正版 - レスポンステキストを先に取得）
         const response = await fetch(`${API_BASE_URL}/reservations`, {
             method: 'POST',
             headers: {
@@ -529,11 +529,27 @@ async function handleAddReservation() {
             })
         });
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+        // レスポンステキストを取得
+        const responseText = await response.text();
+        console.log('[予約追加] レスポンステキスト:', responseText.substring(0, 200));
+        
+        // HTMLレスポンスかチェック
+        if (responseText.startsWith('<!doctype') || responseText.startsWith('<!DOCTYPE') || responseText.includes('<html>')) {
+            throw new Error('API_ENDPOINT_NOT_FOUND');
         }
         
-        const result = await response.json();
+        // JSONとして解析
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('[予約追加] JSON解析エラー:', parseError);
+            throw new Error('INVALID_JSON_RESPONSE');
+        }
+        
+        if (!response.ok) {
+            throw new Error(result.message || result.error || `HTTP error! status: ${response.status}`);
+        }
         
         if (result.success) {
             let successMessage = `予約を追加しました。\n予約番号: ${reservationData.reservationNumber}`;
@@ -573,8 +589,19 @@ async function handleAddReservation() {
         
         let errorMessage = '予約の追加に失敗しました。';
         
-        if (error.message.includes('Failed to fetch')) {
-            errorMessage = 'APIサーバーに接続できません。\n\nネットワーク接続を確認するか、\nしばらく時間をおいてから再度お試しください。';
+        // エラータイプ別の処理
+        if (error.message === 'API_ENDPOINT_NOT_FOUND') {
+            errorMessage = 'APIエンドポイントが見つかりません。\n\n考えられる原因:\n• サーバーのURLが間違っている\n• APIサーバーがダウンしている\n• ネットワーク設定の問題\n\nシステム管理者にお問い合わせください。';
+        } else if (error.message === 'INVALID_JSON_RESPONSE') {
+            errorMessage = 'サーバーから無効な応答が返されました。\nシステム管理者にお問い合わせください。';
+        } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
+            errorMessage = 'ネットワークエラーが発生しました。\n\nネットワーク接続を確認するか、\nしばらく時間をおいてから再度お試しください。';
+        } else if (error.message.includes('404')) {
+            errorMessage = 'APIエンドポイントが見つかりません（404エラー）。\nURL設定を確認してください。';
+        } else if (error.message.includes('500')) {
+            errorMessage = 'サーバー内部エラーが発生しました（500エラー）。\nしばらく時間をおいてから再度お試しください。';
+        } else if (error.message.includes('CORS')) {
+            errorMessage = 'CORS（Cross-Origin Resource Sharing）エラーが発生しました。\nサーバー設定を確認してください。';
         } else if (error.message) {
             errorMessage += '\n\n詳細: ' + error.message;
         }
