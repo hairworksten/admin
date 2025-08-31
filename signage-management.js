@@ -1,4 +1,4 @@
-// デジタルサイネージ管理機能 - 変数重複エラー修正版
+// デジタルサイネージ管理機能 - 重複処理防止版
 
 // グローバル変数（auth.jsで定義済みの場合は使用、未定義の場合は初期化）
 if (typeof window.customSettings === 'undefined') {
@@ -8,8 +8,10 @@ if (typeof window.customSettings === 'undefined') {
     };
 }
 
-// 初期化フラグ
+// 初期化フラグと処理中フラグ
 let signageManagementInitialized = false;
+let isUpdatingCustomMessage = false;
+let isTogglingNewsDisplay = false;
 
 // DOM要素（動的に取得）
 function getSignageDOMElements() {
@@ -19,7 +21,9 @@ function getSignageDOMElements() {
         customMessageModal: document.getElementById('custom-message-modal'),
         updateCustomMessageBtn: document.getElementById('update-custom-message-btn'),
         cancelCustomMessageBtn: document.getElementById('cancel-custom-message-btn'),
-        customMessageInput: document.getElementById('custom-message-input')
+        customMessageInput: document.getElementById('custom-message-input'),
+        currentCustomMessageSpan: document.getElementById('current-custom-message'),
+        currentNewsStatusSpan: document.getElementById('current-news-status')
     };
 }
 
@@ -49,13 +53,15 @@ function initializeSignageManagement() {
 
 // イベント委譲を使用したイベントリスナー設定
 function setupEventDelegation() {
-    // documentレベルでイベントをキャッチ
+    // documentレベルでイベントをキャッチ（重複防止付き）
     document.addEventListener('click', function(event) {
         const target = event.target;
         
         // カスタムメッセージ変更ボタン
         if (target && target.id === 'change-custom-message-btn') {
             event.preventDefault();
+            event.stopPropagation(); // イベントバブリング停止
+            
             console.log('[サイネージ管理] カスタムメッセージ変更ボタンがクリックされました');
             openCustomMessageModal();
             return;
@@ -64,6 +70,14 @@ function setupEventDelegation() {
         // ニュース表示切り替えボタン
         if (target && target.id === 'toggle-news-display-btn') {
             event.preventDefault();
+            event.stopPropagation(); // イベントバブリング停止
+            
+            // 重複処理防止
+            if (isTogglingNewsDisplay) {
+                console.log('[サイネージ管理] ニュース表示切り替え処理中 - 重複実行を防止');
+                return;
+            }
+            
             console.log('[サイネージ管理] ニュース表示切り替えボタンがクリックされました');
             toggleNewsDisplay();
             return;
@@ -72,6 +86,14 @@ function setupEventDelegation() {
         // カスタムメッセージ更新ボタン
         if (target && target.id === 'update-custom-message-btn') {
             event.preventDefault();
+            event.stopPropagation();
+            
+            // 重複処理防止
+            if (isUpdatingCustomMessage) {
+                console.log('[サイネージ管理] カスタムメッセージ更新処理中 - 重複実行を防止');
+                return;
+            }
+            
             console.log('[サイネージ管理] カスタムメッセージ更新ボタンがクリックされました');
             handleUpdateCustomMessage();
             return;
@@ -80,6 +102,7 @@ function setupEventDelegation() {
         // カスタムメッセージキャンセルボタン
         if (target && target.id === 'cancel-custom-message-btn') {
             event.preventDefault();
+            event.stopPropagation();
             console.log('[サイネージ管理] カスタムメッセージキャンセルボタンがクリックされました');
             closeCustomMessageModal();
             return;
@@ -88,6 +111,7 @@ function setupEventDelegation() {
         // 定型文ボタン
         if (target && target.classList.contains('template-btn')) {
             event.preventDefault();
+            event.stopPropagation();
             const template = target.dataset.template;
             console.log('[サイネージ管理] 定型文ボタンがクリックされました:', template);
             applyTemplate(template);
@@ -96,6 +120,7 @@ function setupEventDelegation() {
         
         // モーダル外クリック
         if (target && target.id === 'custom-message-modal') {
+            event.stopPropagation();
             closeCustomMessageModal();
             return;
         }
@@ -158,36 +183,35 @@ async function loadCustomSettingsLocal() {
 function updateSignageUI() {
     console.log('[サイネージ管理] UI更新開始:', window.customSettings);
     
+    const elements = getSignageDOMElements();
+    
     // カスタムメッセージ表示更新
-    const currentCustomMessageSpan = document.getElementById('current-custom-message');
-    if (currentCustomMessageSpan) {
+    if (elements.currentCustomMessageSpan) {
         const messageText = window.customSettings.message || '設定されていません';
-        currentCustomMessageSpan.textContent = messageText;
-        currentCustomMessageSpan.style.color = window.customSettings.message ? '#ffffff' : '#888';
-        currentCustomMessageSpan.style.fontStyle = window.customSettings.message ? 'normal' : 'italic';
+        elements.currentCustomMessageSpan.textContent = messageText;
+        elements.currentCustomMessageSpan.style.color = window.customSettings.message ? '#ffffff' : '#888';
+        elements.currentCustomMessageSpan.style.fontStyle = window.customSettings.message ? 'normal' : 'italic';
         console.log('[サイネージ管理] カスタムメッセージ表示更新:', messageText);
     } else {
         console.warn('[サイネージ管理] current-custom-message要素が見つかりません');
     }
     
     // ニュース表示ステータス更新
-    const currentNewsStatusSpan = document.getElementById('current-news-status');
-    if (currentNewsStatusSpan) {
+    if (elements.currentNewsStatusSpan) {
         const statusText = window.customSettings.news ? 'ON' : 'OFF';
-        currentNewsStatusSpan.textContent = statusText;
-        currentNewsStatusSpan.style.color = window.customSettings.news ? '#28a745' : '#dc3545';
-        currentNewsStatusSpan.style.fontWeight = 'bold';
+        elements.currentNewsStatusSpan.textContent = statusText;
+        elements.currentNewsStatusSpan.style.color = window.customSettings.news ? '#28a745' : '#dc3545';
+        elements.currentNewsStatusSpan.style.fontWeight = 'bold';
         console.log('[サイネージ管理] ニュース表示ステータス更新:', statusText);
     } else {
         console.warn('[サイネージ管理] current-news-status要素が見つかりません');
     }
     
     // ニュース表示ボタンのテキスト更新
-    const toggleNewsDisplayBtn = document.getElementById('toggle-news-display-btn');
-    if (toggleNewsDisplayBtn) {
-        toggleNewsDisplayBtn.textContent = window.customSettings.news ? 'ニュース非表示' : 'ニュース表示';
-        toggleNewsDisplayBtn.className = window.customSettings.news ? 'btn btn-warning' : 'btn btn-success';
-        console.log('[サイネージ管理] ニュース表示ボタン更新:', toggleNewsDisplayBtn.textContent);
+    if (elements.toggleNewsDisplayBtn) {
+        elements.toggleNewsDisplayBtn.textContent = window.customSettings.news ? 'ニュース非表示' : 'ニュース表示';
+        elements.toggleNewsDisplayBtn.className = window.customSettings.news ? 'btn btn-warning' : 'btn btn-success';
+        console.log('[サイネージ管理] ニュース表示ボタン更新:', elements.toggleNewsDisplayBtn.textContent);
     } else {
         console.warn('[サイネージ管理] toggle-news-display-btn要素が見つかりません');
     }
@@ -235,21 +259,34 @@ function closeCustomMessageModal() {
     if (elements.customMessageInput) {
         elements.customMessageInput.value = '';
     }
+    
+    // 処理中フラグをリセット
+    isUpdatingCustomMessage = false;
 }
 
-// カスタムメッセージ更新処理
+// カスタムメッセージ更新処理（重複処理防止版）
 async function handleUpdateCustomMessage() {
     console.log('[サイネージ管理] カスタムメッセージ更新処理開始');
+    
+    // 重複処理防止
+    if (isUpdatingCustomMessage) {
+        console.log('[サイネージ管理] カスタムメッセージ更新処理中 - 重複実行を防止');
+        return;
+    }
+    
+    isUpdatingCustomMessage = true;
     
     const elements = getSignageDOMElements();
     const newMessage = elements.customMessageInput ? elements.customMessageInput.value.trim() : '';
     
     console.log('[サイネージ管理] 新しいメッセージ:', newMessage);
     
-    // ボタン無効化
+    // ボタン無効化（視覚的フィードバック）
     if (elements.updateCustomMessageBtn) {
         elements.updateCustomMessageBtn.disabled = true;
-        elements.updateCustomMessageBtn.textContent = '更新中...';
+        elements.updateCustomMessageBtn.textContent = '💾 更新中...';
+        elements.updateCustomMessageBtn.style.opacity = '0.7';
+        elements.updateCustomMessageBtn.style.cursor = 'not-allowed';
     }
     
     try {
@@ -274,49 +311,81 @@ async function handleUpdateCustomMessage() {
         if (data.success) {
             window.customSettings.message = newMessage;
             updateSignageUI();
-            closeCustomMessageModal();
             
-            const successMessage = newMessage ? 
-                `カスタムメッセージを更新しました。\n「${newMessage}」` :
-                'カスタムメッセージをクリアしました。';
+            // 成功時のボタン表示
+            if (elements.updateCustomMessageBtn) {
+                elements.updateCustomMessageBtn.textContent = '✅ 更新完了';
+                elements.updateCustomMessageBtn.style.backgroundColor = '#28a745';
+                elements.updateCustomMessageBtn.style.color = '#ffffff';
+            }
             
-            alert(successMessage);
+            // 少し遅延してモーダルを閉じる
+            setTimeout(() => {
+                closeCustomMessageModal();
+                
+                // 成功メッセージを表示（1回のみ）
+                const successMessage = newMessage ? 
+                    `✅ カスタムメッセージを更新しました\n\n📝 新しいメッセージ:\n「${newMessage}」` :
+                    '✅ カスタムメッセージをクリアしました';
+                
+                alert(successMessage);
+                
+            }, 1000);
+            
             console.log('[サイネージ管理] カスタムメッセージ更新成功');
         } else {
             throw new Error(data.error || 'カスタムメッセージの更新に失敗しました');
         }
     } catch (error) {
         console.error('[サイネージ管理] カスタムメッセージ更新エラー:', error);
-        alert(`カスタムメッセージの更新に失敗しました。\nエラー: ${error.message}`);
+        alert(`❌ カスタムメッセージの更新に失敗しました\n\n🔧 エラー詳細:\n${error.message}`);
     } finally {
         // ボタン再有効化
         if (elements.updateCustomMessageBtn) {
             elements.updateCustomMessageBtn.disabled = false;
-            elements.updateCustomMessageBtn.textContent = 'メッセージ更新';
+            elements.updateCustomMessageBtn.textContent = '💾 メッセージ更新';
+            elements.updateCustomMessageBtn.style.opacity = '1';
+            elements.updateCustomMessageBtn.style.cursor = 'pointer';
+            elements.updateCustomMessageBtn.style.backgroundColor = '#ff6b35';
         }
+        
+        // 処理完了フラグをリセット
+        isUpdatingCustomMessage = false;
     }
 }
 
-// ニュース表示切り替え
+// ニュース表示切り替え（重複処理防止版）
 async function toggleNewsDisplay() {
     console.log('[サイネージ管理] ニュース表示切り替え処理開始');
+    
+    // 重複処理防止
+    if (isTogglingNewsDisplay) {
+        console.log('[サイネージ管理] ニュース表示切り替え処理中 - 重複実行を防止');
+        return;
+    }
+    
+    isTogglingNewsDisplay = true;
     
     const newNewsStatus = !window.customSettings.news;
     console.log('[サイネージ管理] 新しいニュース表示状態:', newNewsStatus);
     
     // 確認ダイアログ
-    const confirmMessage = `ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしますか？`;
+    const confirmMessage = `📺 ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしますか？\n\n${newNewsStatus ? '📰 ニュースが表示されるようになります' : '🚫 ニュース表示が停止されます'}`;
+    
     if (!confirm(confirmMessage)) {
         console.log('[サイネージ管理] ニュース表示切り替えキャンセル');
+        isTogglingNewsDisplay = false;
         return;
     }
     
     const elements = getSignageDOMElements();
     
-    // ボタン無効化
+    // ボタン無効化（視覚的フィードバック）
     if (elements.toggleNewsDisplayBtn) {
         elements.toggleNewsDisplayBtn.disabled = true;
-        elements.toggleNewsDisplayBtn.textContent = '更新中...';
+        elements.toggleNewsDisplayBtn.textContent = '⚙️ 更新中...';
+        elements.toggleNewsDisplayBtn.style.opacity = '0.7';
+        elements.toggleNewsDisplayBtn.style.cursor = 'not-allowed';
     }
     
     try {
@@ -340,22 +409,47 @@ async function toggleNewsDisplay() {
         
         if (data.success) {
             window.customSettings.news = newNewsStatus;
-            updateSignageUI();
             
-            alert(`ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしました。`);
+            // 成功時のボタン表示
+            if (elements.toggleNewsDisplayBtn) {
+                const successIcon = newNewsStatus ? '✅📰' : '✅🚫';
+                elements.toggleNewsDisplayBtn.textContent = `${successIcon} 更新完了`;
+                elements.toggleNewsDisplayBtn.style.backgroundColor = '#28a745';
+                elements.toggleNewsDisplayBtn.style.color = '#ffffff';
+            }
+            
+            // 少し遅延してUIを更新
+            setTimeout(() => {
+                updateSignageUI();
+                
+                // 成功メッセージを表示（1回のみ）
+                const successMessage = `✅ ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしました\n\n📺 ${newNewsStatus ? 'ニュースが表示されます' : 'ニュース表示が停止されます'}`;
+                alert(successMessage);
+                
+            }, 1000);
+            
             console.log('[サイネージ管理] ニュース表示切り替え成功');
         } else {
             throw new Error(data.error || 'ニュース表示設定の更新に失敗しました');
         }
     } catch (error) {
         console.error('[サイネージ管理] ニュース表示更新エラー:', error);
-        alert(`ニュース表示設定の更新に失敗しました。\nエラー: ${error.message}`);
+        alert(`❌ ニュース表示設定の更新に失敗しました\n\n🔧 エラー詳細:\n${error.message}`);
     } finally {
         // ボタン再有効化
         if (elements.toggleNewsDisplayBtn) {
             elements.toggleNewsDisplayBtn.disabled = false;
-            updateSignageUI(); // ボタンテキストを元に戻す
+            elements.toggleNewsDisplayBtn.style.opacity = '1';
+            elements.toggleNewsDisplayBtn.style.cursor = 'pointer';
         }
+        
+        // UIを元に戻す（少し遅延）
+        setTimeout(() => {
+            updateSignageUI();
+        }, 1500);
+        
+        // 処理完了フラグをリセット
+        isTogglingNewsDisplay = false;
     }
 }
 
