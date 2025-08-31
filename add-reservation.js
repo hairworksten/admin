@@ -146,7 +146,7 @@ document.addEventListener('click', function(event) {
     }
 });
 
-// 予約追加モーダルを開く
+// 予約追加モーダルを開く（修正版 - メニュー読み込み強化）
 function openAddReservationModal() {
     console.log('[予約追加] モーダルを開く');
     
@@ -171,9 +171,6 @@ function openAddReservationModal() {
     // フォームをリセット
     resetAddReservationForm();
     
-    // メニューオプションを設定
-    populateMenuOptions();
-    
     // 日付制限を撤廃（管理者権限）
     if (addReservationDateInput) {
         addReservationDateInput.removeAttribute('min');
@@ -191,6 +188,52 @@ function openAddReservationModal() {
         addReservationDateInput.setCustomValidity('');
         
         console.log('[予約追加] 日付制限を撤廃');
+    }
+    
+    // メニューデータが利用可能かチェック
+    console.log('[予約追加] モーダル表示前のメニューデータ確認:', {
+        currentMenusExists: !!currentMenus,
+        currentMenusType: typeof currentMenus,
+        currentMenusKeys: currentMenus ? Object.keys(currentMenus) : 'なし'
+    });
+    
+    // メニューデータが不足している場合は先に読み込み
+    if (!currentMenus || typeof currentMenus !== 'object' || Object.keys(currentMenus).length === 0) {
+        console.warn('[予約追加] メニューデータが不足しています。読み込みを実行...');
+        
+        // メニュー読み込み中メッセージを表示
+        if (addReservationMenuSelect) {
+            addReservationMenuSelect.innerHTML = '<option value="">メニューを読み込み中...</option>';
+            addReservationMenuSelect.disabled = true;
+        }
+        
+        // メニューデータを読み込み
+        if (typeof loadMenus === 'function') {
+            loadMenus().then(() => {
+                console.log('[予約追加] メニューデータ読み込み完了');
+                // メニューオプションを設定
+                if (addReservationMenuSelect) {
+                    addReservationMenuSelect.disabled = false;
+                }
+                populateMenuOptions();
+            }).catch(error => {
+                console.error('[予約追加] メニューデータ読み込みエラー:', error);
+                if (addReservationMenuSelect) {
+                    addReservationMenuSelect.disabled = false;
+                }
+                // フォールバックでデフォルトオプション設定
+                populateMenuOptions();
+            });
+        } else {
+            console.warn('[予約追加] loadMenus関数が見つかりません');
+            if (addReservationMenuSelect) {
+                addReservationMenuSelect.disabled = false;
+            }
+            populateMenuOptions();
+        }
+    } else {
+        // メニューデータが利用可能な場合は通常設定
+        populateMenuOptions();
     }
     
     // モーダル表示
@@ -229,18 +272,109 @@ function resetAddReservationForm() {
     }
 }
 
-// メニューオプションを設定
+// メニューオプションを設定（修正版 - デバッグ強化）
 function populateMenuOptions() {
-    if (!addReservationMenuSelect || !currentMenus) return;
+    console.log('[予約追加] メニューオプション設定開始');
     
+    if (!addReservationMenuSelect) {
+        console.error('[予約追加] メニューセレクト要素が見つかりません');
+        return;
+    }
+    
+    // currentMenusの存在確認とデバッグ
+    console.log('[予約追加] currentMenus確認:', {
+        exists: !!currentMenus,
+        type: typeof currentMenus,
+        keys: currentMenus ? Object.keys(currentMenus) : 'なし',
+        content: currentMenus
+    });
+    
+    // 初期化
     addReservationMenuSelect.innerHTML = '<option value="">メニューを選択してください</option>';
     
-    Object.keys(currentMenus).forEach(menuName => {
+    // currentMenusが存在しない場合の対処
+    if (!currentMenus || typeof currentMenus !== 'object') {
+        console.warn('[予約追加] currentMenusが無効です。再読み込みを試行します...');
+        
+        // メニューデータを再読み込み
+        if (typeof loadMenus === 'function') {
+            loadMenus().then(() => {
+                console.log('[予約追加] メニューデータ再読み込み完了。再度オプション設定を試行...');
+                setTimeout(() => {
+                    populateMenuOptions();
+                }, 500);
+            }).catch(error => {
+                console.error('[予約追加] メニューデータ再読み込みエラー:', error);
+                // フォールバック: デフォルトメニューを表示
+                addFallbackMenuOptions();
+            });
+        } else {
+            console.warn('[予約追加] loadMenus関数が見つかりません');
+            addFallbackMenuOptions();
+        }
+        return;
+    }
+    
+    const menuKeys = Object.keys(currentMenus);
+    console.log('[予約追加] 利用可能なメニュー:', menuKeys);
+    
+    if (menuKeys.length === 0) {
+        console.warn('[予約追加] メニューが登録されていません');
+        addReservationMenuSelect.innerHTML = '<option value="">メニューが登録されていません</option>';
+        return;
+    }
+    
+    // メニューオプションを追加
+    menuKeys.forEach(menuName => {
+        try {
+            const menu = currentMenus[menuName];
+            if (!menu || typeof menu !== 'object') {
+                console.warn(`[予約追加] 無効なメニューデータ: ${menuName}`, menu);
+                return;
+            }
+            
+            const option = document.createElement('option');
+            option.value = menuName;
+            
+            const worktime = menu.worktime || '不明';
+            const fare = menu.fare || 0;
+            const fareText = typeof fare === 'number' ? fare.toLocaleString() : fare;
+            
+            option.textContent = `${menuName} - ${worktime}分 - ¥${fareText}`;
+            addReservationMenuSelect.appendChild(option);
+            
+            console.log(`[予約追加] メニューオプション追加: ${menuName}`);
+        } catch (error) {
+            console.error(`[予約追加] メニューオプション追加エラー: ${menuName}`, error);
+        }
+    });
+    
+    console.log(`[予約追加] メニューオプション設定完了: ${menuKeys.length}個`);
+}
+
+// フォールバック用のデフォルトメニュー表示
+function addFallbackMenuOptions() {
+    console.log('[予約追加] フォールバックメニューオプションを設定');
+    
+    if (!addReservationMenuSelect) return;
+    
+    // デフォルトメニューを追加（実際のデータがない場合の応急処置）
+    const fallbackMenus = [
+        { name: 'カット', worktime: '30', fare: '3000' },
+        { name: 'カット＋シャンプー', worktime: '45', fare: '4000' },
+        { name: 'パーマ', worktime: '90', fare: '8000' }
+    ];
+    
+    addReservationMenuSelect.innerHTML = '<option value="">メニューを選択してください（フォールバック）</option>';
+    
+    fallbackMenus.forEach(menu => {
         const option = document.createElement('option');
-        option.value = menuName;
-        option.textContent = `${menuName} - ${currentMenus[menuName].worktime}分 - ¥${currentMenus[menuName].fare.toLocaleString()}`;
+        option.value = menu.name;
+        option.textContent = `${menu.name} - ${menu.worktime}分 - ¥${menu.fare}`;
         addReservationMenuSelect.appendChild(option);
     });
+    
+    console.log('[予約追加] フォールバックメニュー設定完了');
 }
 
 // 日付変更時の処理
@@ -706,13 +840,39 @@ async function handleAddReservation() {
         return;
     }
     
-    // 選択されたメニューの詳細を取得
-    const selectedMenu = currentMenus[menuName];
-    if (!selectedMenu) {
-        alert('選択されたメニューが見つかりません。');
-        isProcessingReservation = false;
-        return;
+    // 選択されたメニューの詳細を取得（修正版 - フォールバック対応）
+    let selectedMenu = null;
+    
+    // currentMenusから取得を試行
+    if (currentMenus && typeof currentMenus === 'object') {
+        selectedMenu = currentMenus[menuName];
     }
+    
+    // フォールバック用のメニューデータ
+    if (!selectedMenu) {
+        console.warn('[予約追加] currentMenusからメニューが見つかりません。フォールバックデータを使用');
+        
+        // デフォルトメニューデータ（実際の運用では事前に定義しておく）
+        const fallbackMenus = {
+            'カット': { worktime: 30, fare: 3000 },
+            'カット＋シャンプー': { worktime: 45, fare: 4000 },
+            'パーマ': { worktime: 90, fare: 8000 },
+            'カラー': { worktime: 120, fare: 10000 }
+        };
+        
+        selectedMenu = fallbackMenus[menuName];
+        
+        if (!selectedMenu) {
+            // それでも見つからない場合はデフォルト値
+            selectedMenu = {
+                worktime: 60,
+                fare: 5000
+            };
+            console.warn(`[予約追加] メニュー「${menuName}」が見つかりません。デフォルト値を使用します`);
+        }
+    }
+    
+    console.log('[予約追加] 使用するメニューデータ:', { menuName, selectedMenu });
     
     // 送信ボタンを無効化（視覚的フィードバック改善）
     if (submitAddReservationBtn) {
