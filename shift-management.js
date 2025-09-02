@@ -1,4 +1,4 @@
-// シフト表管理機能 - 最終修正版
+// シフト表管理機能 - データベース読み込み対応版
 
 // グローバル変数
 let shiftData = {};
@@ -53,11 +53,8 @@ function initializeShiftManagement() {
     // イベントリスナー設定
     setupShiftEventListeners();
     
-    // ローカルストレージからデータを読み込み
-    loadShiftDataFromStorage();
-    
-    // 初期状態を設定
-    updateShiftStatus();
+    // データ読み込み（優先順位: データベース → ローカルストレージ）
+    loadShiftDataFromAllSources();
     
     // 初期化完了フラグ
     window.shiftManagementInitialized = true;
@@ -90,6 +87,491 @@ function setupShiftEventListeners() {
         shiftClearBtn.removeEventListener('click', clearShiftData);
         shiftClearBtn.addEventListener('click', clearShiftData);
         debugLog('クリアボタンのイベントリスナーを設定');
+    }
+}
+
+// 全ソースからシフトデータを読み込み
+async function loadShiftDataFromAllSources() {
+    debugLog('全ソースからのシフトデータ読み込み開始');
+    
+    try {
+        // 1. データベースからの読み込みを試行
+        const dbLoaded = await loadShiftDataFromDatabase();
+        
+        if (dbLoaded) {
+            debugLog('データベースからシフトデータを読み込み成功');
+            updateShiftStatus();
+            showShiftPreview();
+            return;
+        }
+        
+        // 2. データベースに失敗した場合はローカルストレージから読み込み
+        debugLog('データベース読み込み失敗 - ローカルストレージを確認');
+        const localLoaded = loadShiftDataFromStorage();
+        
+        if (localLoaded) {
+            debugLog('ローカルストレージからシフトデータを読み込み成功');
+        } else {
+            debugLog('ローカルストレージにもシフトデータなし');
+        }
+        
+        updateShiftStatus();
+        if (localLoaded) {
+            showShiftPreview();
+        }
+        
+    } catch (error) {
+        debugLog(`シフトデータ読み込みエラー: ${error.message}`);
+        updateShiftStatus();
+    }
+}
+
+// データベースからシフトデータを読み込み
+async function loadShiftDataFromDatabase() {
+    debugLog('データベースからのシフトデータ読み込み開始');
+    
+    try {
+        // API_BASE_URLが定義されていない場合はスキップ
+        if (typeof API_BASE_URL === 'undefined') {
+            debugLog('API_BASE_URL が定義されていません - データベース読み込みをスキップ');
+            return false;
+        }
+        
+        const response = await fetch(`${API_BASE_URL}/shifts`, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            if (response.status === 404) {
+                debugLog('データベースにシフトデータが存在しません（404）');
+                return false;
+            }
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        debugLog('データベース応答:', data);
+        
+        if (data.success && data.shifts) {
+            // 月別データを日別データに変換
+            const dailyShiftData = convertMonthlyToDailyShifts(data.shifts);
+            
+            if (Object.keys(dailyShiftData).length > 0) {
+                shiftData = dailyShiftData;
+                shiftFileUploaded = true;
+                
+                // グローバルに公開
+                window.shiftData = dailyShiftData;
+                
+                // ローカルストレージにも保存（同期）
+                localStorage.setItem('shiftData', JSON.stringify(dailyShiftData));
+                localStorage.setItem('shiftFileName', data.fileName || 'database.xlsx');
+                localStorage.setItem('shiftDataSource', 'database');
+                
+                debugLog(`データベースから${Object.keys(dailyShiftData).length}日分のシフトデータを読み込み`);
+                return true;
+            }
+        }
+        
+        debugLog('データベースに有効なシフトデータなし');
+        return false;
+        
+    } catch (error) {
+        debugLog(`データベース読み込みエラー: ${error.message}`);
+        
+        // ネットワークエラーの場合は警告のみ
+        if (error.message.includes('fetch') || 
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('NetworkError')) {
+            debugLog('APIサーバーに接続できませんが、ローカルデータは保存されました');
+            throw new Error('ネットワークエラー: APIサーバーに接続できません');
+        }
+        
+        throw error;
+    }
+}
+
+// 日付別シフトデータを月別に整理
+function organizeShiftsByMonth(dailyShiftData) {
+    debugLog('日付別→月別データ変換開始');
+    const monthlyShifts = {};
+    
+    Object.keys(dailyShiftData).forEach(dateString => {
+        const employees = dailyShiftData[dateString];
+        
+        // 日付から年月を抽出（YYYY-MM-DD → YYYY-MM）
+        const yearMonth = dateString.substring(0, 7);
+        
+        // 日を抽出（YYYY-MM-DD → DD）
+        const day = dateString.substring(8, 10);
+        
+        if (!monthlyShifts[yearMonth]) {
+            monthlyShifts[yearMonth] = {};
+        }
+        
+        // その日の従業員名を結合
+        if (employees && employees.length > 0) {
+            const employeeNames = employees.map(emp => emp.name).join('、');
+            monthlyShifts[yearMonth][day] = employeeNames;
+            debugLog(`変換: ${dateString} → ${yearMonth}[${day}] = ${employeeNames}`);
+        }
+    });
+    
+    debugLog(`月別変換完了: ${Object.keys(monthlyShifts).length}ヶ月分`);
+    return monthlyShifts;
+}
+
+// シフトデータをクリア（データベース対応版）
+async function clearShiftData() {
+    if (!confirm('シフト表データをクリアしますか？\n※データベースとローカルストレージの両方から削除されます。')) {
+        return;
+    }
+    
+    debugLog('シフトデータクリア開始');
+    
+    try {
+        // データベースからの削除を試行
+        if (typeof API_BASE_URL !== 'undefined') {
+            try {
+                const response = await fetch(`${API_BASE_URL}/shifts`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    debugLog('データベースからシフトデータを削除完了');
+                } else {
+                    debugLog(`データベース削除失敗: ${response.status}`);
+                }
+            } catch (dbError) {
+                debugLog(`データベース削除エラー: ${dbError.message}`);
+            }
+        }
+        
+        // ローカルデータクリア
+        shiftData = {};
+        shiftFileUploaded = false;
+        
+        // グローバルデータもクリア
+        window.shiftData = {};
+        
+        localStorage.removeItem('shiftData');
+        localStorage.removeItem('shiftFileName');
+        localStorage.removeItem('shiftDataSource');
+        
+        updateShiftStatus();
+        hideShiftPreview();
+        
+        if (shiftFileInput) {
+            shiftFileInput.value = '';
+        }
+        
+        // カレンダーを再描画
+        if (typeof renderCalendar === 'function') {
+            renderCalendar();
+        }
+        
+        showShiftSuccess('シフト表データをクリアしました。');
+        debugLog('シフトデータクリア完了');
+        
+    } catch (error) {
+        debugLog(`シフトデータクリアエラー: ${error.message}`);
+        showShiftError(`シフトデータのクリアに失敗しました: ${error.message}`);
+    }
+}
+
+// シフト状態を更新（データソース表示対応版）
+function updateShiftStatus() {
+    const shiftClearBtn = document.getElementById('shift-clear-btn');
+    
+    if (shiftFileUploaded && Object.keys(shiftData).length > 0) {
+        const fileName = localStorage.getItem('shiftFileName') || 'unknown.xlsx';
+        const dataSource = localStorage.getItem('shiftDataSource') || 'unknown';
+        
+        let sourceText = '';
+        switch (dataSource) {
+            case 'database':
+                sourceText = '（データベースから読み込み）';
+                break;
+            case 'upload':
+                sourceText = '（ファイルアップロード）';
+                break;
+            default:
+                sourceText = '';
+        }
+        
+        showShiftSuccess(`シフト表「${fileName}」が読み込まれています。${sourceText}`);
+        
+        if (shiftClearBtn) {
+            shiftClearBtn.style.display = 'inline-block';
+        }
+    } else {
+        showShiftStatus('シフト表がアップロードされていません。', 'info');
+        
+        if (shiftClearBtn) {
+            shiftClearBtn.style.display = 'none';
+        }
+    }
+}
+
+// シフトプレビューを表示
+function showShiftPreview() {
+    const previewDiv = document.getElementById('shift-preview');
+    if (!previewDiv) return;
+    
+    const dateKeys = Object.keys(shiftData).sort();
+    if (dateKeys.length === 0) {
+        hideShiftPreview();
+        return;
+    }
+    
+    const previewDates = dateKeys.slice(0, 7);
+    
+    const previewHTML = previewDates.map(date => {
+        const employees = shiftData[date] || [];
+        const employeeList = employees.map(emp => `${emp.name}(${emp.shift})`).join(', ');
+        
+        return `
+            <div class="shift-preview-item">
+                <strong>${formatDateForDisplay(date)}:</strong> ${employeeList || '未設定'}
+            </div>
+        `;
+    }).join('');
+    
+    previewDiv.innerHTML = `
+        <h4>シフトプレビュー（最初の7日分）</h4>
+        ${previewHTML}
+        ${dateKeys.length > 7 ? `<div style="color: #888; text-align: center; padding: 8px;">...他 ${dateKeys.length - 7} 日分</div>` : ''}
+    `;
+    
+    previewDiv.style.display = 'block';
+}
+
+// シフトプレビューを非表示
+function hideShiftPreview() {
+    const previewDiv = document.getElementById('shift-preview');
+    if (previewDiv) {
+        previewDiv.style.display = 'none';
+    }
+}
+
+// 日付を表示用にフォーマット
+function formatDateForDisplay(dateString) {
+    const date = new Date(dateString + 'T00:00:00');
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
+    const weekday = weekdays[date.getDay()];
+    
+    return `${month}/${day}(${weekday})`;
+}
+
+// 特定の日のシフト情報を取得（カレンダーから呼び出される）
+function getShiftForDate(dateString) {
+    debugLog(`getShiftForDate(${dateString}) 呼び出し`);
+    const result = shiftData[dateString] || [];
+    debugLog(`getShiftForDate(${dateString}) → ${result.length}人`);
+    return result;
+}
+
+// データベース同期機能（定期的にデータベースと同期）
+async function syncShiftDataWithDatabase() {
+    debugLog('データベース同期開始');
+    
+    try {
+        const dbLoaded = await loadShiftDataFromDatabase();
+        
+        if (dbLoaded) {
+            debugLog('データベース同期完了');
+            
+            // カレンダーが表示されている場合は再描画
+            if (typeof renderCalendar === 'function') {
+                const calendarTab = document.getElementById('calendar-tab');
+                if (calendarTab && calendarTab.classList.contains('active')) {
+                    renderCalendar();
+                }
+            }
+            
+            return true;
+        } else {
+            debugLog('データベースに同期すべきデータなし');
+            return false;
+        }
+        
+    } catch (error) {
+        debugLog(`データベース同期エラー: ${error.message}`);
+        return false;
+    }
+}
+
+// シフトメッセージ表示関数
+function showShiftStatus(message, type) {
+    if (!shiftStatusDiv) {
+        debugLog('shiftStatusDiv が見つかりません');
+        return;
+    }
+    
+    shiftStatusDiv.className = `shift-status ${type}`;
+    shiftStatusDiv.textContent = message;
+    shiftStatusDiv.style.display = 'block';
+    
+    debugLog(`ステータス表示: [${type}] ${message}`);
+}
+
+function showShiftSuccess(message) {
+    showShiftStatus(message, 'success');
+}
+
+function showShiftError(message) {
+    showShiftStatus(message, 'error');
+}
+
+// 定期同期の設定（オプション）
+function startPeriodicSync() {
+    // 30分ごとにデータベースとの同期を試行
+    setInterval(async () => {
+        debugLog('定期同期実行');
+        await syncShiftDataWithDatabase();
+    }, 30 * 60 * 1000); // 30分
+}
+
+// DOM読み込み完了時の初期化
+document.addEventListener('DOMContentLoaded', function() {
+    debugLog('DOMContentLoaded - シフト管理初期化開始');
+    
+    // 少し遅延させて他のスクリプトの読み込みを待つ
+    setTimeout(() => {
+        initializeShiftManagement();
+        
+        // 定期同期を開始（オプション）
+        // startPeriodicSync();
+        
+    }, 1000);
+});
+
+// タブ切り替え時の初期化（設定タブが選択された時）
+document.addEventListener('click', function(event) {
+    if (event.target && event.target.getAttribute('data-tab') === 'settings') {
+        debugLog('設定タブが選択されました');
+        
+        // 少し遅延させてDOM要素が確実に表示された後に初期化
+        setTimeout(() => {
+            if (!window.shiftManagementInitialized) {
+                debugLog('設定タブ選択時の遅延初期化実行');
+                initializeShiftManagement();
+            } else {
+                // データベース同期を試行
+                syncShiftDataWithDatabase();
+            }
+        }, 200);
+    }
+});
+
+// カレンダータブ選択時のデータベース同期
+document.addEventListener('click', function(event) {
+    if (event.target && event.target.getAttribute('data-tab') === 'calendar') {
+        debugLog('カレンダータブが選択されました');
+        
+        // シフトデータがない場合はデータベースから読み込みを試行
+        if (Object.keys(shiftData).length === 0) {
+            setTimeout(async () => {
+                debugLog('シフトデータなし - データベース読み込み試行');
+                await syncShiftDataWithDatabase();
+            }, 500);
+        }
+    }
+});
+
+// リアルタイム更新機能との連携（シフトデータ更新通知）
+function handleShiftDataUpdate(data) {
+    debugLog('リアルタイム更新: シフトデータ更新通知');
+    
+    if (data && data.type === 'shift_updated') {
+        // データベースから最新データを取得
+        syncShiftDataWithDatabase();
+    }
+}
+
+// グローバル関数として公開
+window.getShiftForDate = getShiftForDate;
+window.initializeShiftManagement = initializeShiftManagement;
+window.syncShiftDataWithDatabase = syncShiftDataWithDatabase;
+window.handleShiftDataUpdate = handleShiftDataUpdate;
+        if (error.message.includes('fetch') || 
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('NetworkError')) {
+            debugLog('APIサーバーに接続できません（ネットワークエラー）');
+        }
+        
+        return false;
+    }
+}
+
+// 月別シフトデータを日別に変換
+function convertMonthlyToDailyShifts(monthlyShifts) {
+    debugLog('月別データを日別データに変換開始');
+    const dailyData = {};
+    
+    Object.keys(monthlyShifts).forEach(yearMonth => {
+        const monthData = monthlyShifts[yearMonth];
+        
+        Object.keys(monthData).forEach(day => {
+            const employeeNames = monthData[day];
+            
+            if (employeeNames && employeeNames.trim()) {
+                // 日付文字列を生成（YYYY-MM-DD形式）
+                const dayPadded = String(day).padStart(2, '0');
+                const fullDate = `${yearMonth}-${dayPadded}`;
+                
+                // 従業員名を分割してオブジェクト配列に変換
+                const employees = employeeNames.split('、').map(name => ({
+                    name: name.trim(),
+                    shift: 'Y'
+                }));
+                
+                dailyData[fullDate] = employees;
+                debugLog(`変換: ${fullDate} → ${employees.length}人`);
+            }
+        });
+    });
+    
+    debugLog(`月別→日別変換完了: ${Object.keys(dailyData).length}日分`);
+    return dailyData;
+}
+
+// ローカルストレージからデータを読み込み
+function loadShiftDataFromStorage() {
+    try {
+        const savedShiftData = localStorage.getItem('shiftData');
+        if (savedShiftData) {
+            const parsedData = JSON.parse(savedShiftData);
+            
+            if (parsedData && typeof parsedData === 'object' && Object.keys(parsedData).length > 0) {
+                shiftData = parsedData;
+                shiftFileUploaded = true;
+                
+                // グローバルに公開
+                window.shiftData = parsedData;
+                
+                debugLog(`ローカルストレージから${Object.keys(parsedData).length}日分のシフトデータを読み込み`);
+                return true;
+            }
+        }
+        
+        debugLog('ローカルストレージにシフトデータなし');
+        return false;
+        
+    } catch (error) {
+        debugLog(`ローカルストレージ読み込みエラー: ${error.message}`);
+        localStorage.removeItem('shiftData');
+        localStorage.removeItem('shiftFileName');
+        localStorage.removeItem('shiftDataSource');
+        return false;
     }
 }
 
@@ -171,23 +653,30 @@ async function handleShiftFileUpload(event) {
         // ローカルストレージに保存
         localStorage.setItem('shiftData', JSON.stringify(parsedShiftData));
         localStorage.setItem('shiftFileName', file.name);
+        localStorage.setItem('shiftDataSource', 'upload');
         debugLog('ローカルストレージに保存完了');
         
         // データベースに保存を試行
         try {
-            await saveShiftDataToDatabase(parsedShiftData);
+            await saveShiftDataToDatabase(parsedShiftData, file.name);
             debugLog('データベース保存完了');
+            showShiftSuccess(`シフト表「${file.name}」を読み込み、データベースに保存しました。`);
         } catch (dbError) {
             debugLog(`データベース保存エラー（ローカルデータは保存済み）: ${dbError.message}`);
+            showShiftSuccess(`シフト表「${file.name}」を読み込みました。（※ローカル保存のみ）`);
         }
         
-        // 成功メッセージとプレビュー表示
-        showShiftSuccess(`シフト表「${file.name}」を読み込みました。`);
+        // プレビュー表示
         showShiftPreview();
         
         // カレンダーを再描画
         if (typeof renderCalendar === 'function') {
             renderCalendar();
+        }
+        
+        // ファイル入力をリセット
+        if (shiftFileInput) {
+            shiftFileInput.value = '';
         }
         
     } catch (error) {
@@ -463,31 +952,57 @@ function parseShiftExcel(workbook) {
     return parsedData;
 }
 
-// データベース保存機能
-async function saveShiftDataToDatabase(shiftData) {
+// データベース保存機能（修正版）
+async function saveShiftDataToDatabase(shiftData, fileName) {
+    debugLog('データベース保存開始');
+    
     try {
         // API_BASE_URLが定義されていない場合はスキップ
         if (typeof API_BASE_URL === 'undefined') {
             debugLog('API_BASE_URL が定義されていません - データベース保存をスキップ');
-            return false;
+            throw new Error('APIサーバーが設定されていません');
         }
         
         // 日付別シフトデータを月別に整理
         const monthlyShifts = organizeShiftsByMonth(shiftData);
         
-        debugLog('データベースに保存中...');
+        const payload = {
+            shifts: monthlyShifts,
+            fileName: fileName,
+            uploadedAt: new Date().toISOString()
+        };
+        
+        debugLog('データベースに送信するデータ:', payload);
         
         const response = await fetch(`${API_BASE_URL}/shifts`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
-            body: JSON.stringify({
-                shifts: monthlyShifts
-            })
+            body: JSON.stringify(payload)
         });
         
-        const result = await response.json();
+        const responseText = await response.text();
+        debugLog(`API応答: ${response.status} ${response.statusText}`);
+        debugLog(`応答内容: ${responseText.substring(0, 200)}`);
+        
+        // HTMLが返された場合
+        if (responseText.startsWith('<!doctype') || responseText.startsWith('<!DOCTYPE') || responseText.includes('<html>')) {
+            throw new Error('APIエンドポイントが見つかりません。サーバー設定を確認してください。');
+        }
+        
+        // JSONとして解析
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            throw new Error('サーバーから無効なJSON応答が返されました。');
+        }
+        
+        if (!response.ok) {
+            throw new Error(result.error || result.message || `HTTP ${response.status}`);
+        }
         
         if (result.success) {
             debugLog('データベース保存成功');
@@ -500,215 +1015,3 @@ async function saveShiftDataToDatabase(shiftData) {
         debugLog(`データベース保存エラー: ${error.message}`);
         
         // ネットワークエラーの場合は警告のみ
-        if (error.message.includes('fetch') || 
-            error.message.includes('Failed to fetch') ||
-            error.message.includes('NetworkError')) {
-            debugLog('APIサーバーに接続できませんが、ローカルデータは保存されました');
-            return false;
-        }
-        
-        throw error;
-    }
-}
-
-// 日付別シフトデータを月別に整理
-function organizeShiftsByMonth(dailyShiftData) {
-    const monthlyShifts = {};
-    
-    Object.keys(dailyShiftData).forEach(dateString => {
-        const employees = dailyShiftData[dateString];
-        
-        // 日付から年月を抽出（YYYY-MM-DD → YYYY-MM）
-        const yearMonth = dateString.substring(0, 7);
-        
-        // 日を抽出（YYYY-MM-DD → DD）
-        const day = dateString.substring(8, 10);
-        
-        if (!monthlyShifts[yearMonth]) {
-            monthlyShifts[yearMonth] = {};
-        }
-        
-        // その日の従業員名を結合
-        if (employees && employees.length > 0) {
-            const employeeNames = employees.map(emp => emp.name).join('、');
-            monthlyShifts[yearMonth][day] = employeeNames;
-        }
-    });
-    
-    return monthlyShifts;
-}
-
-// ローカルストレージからデータを読み込み
-function loadShiftDataFromStorage() {
-    try {
-        const savedShiftData = localStorage.getItem('shiftData');
-        if (savedShiftData) {
-            shiftData = JSON.parse(savedShiftData);
-            shiftFileUploaded = Object.keys(shiftData).length > 0;
-            
-            // グローバルに公開
-            window.shiftData = shiftData;
-            
-            debugLog('ローカルストレージからシフトデータを読み込みました');
-        }
-    } catch (error) {
-        debugLog(`シフトデータ読み込みエラー: ${error.message}`);
-        localStorage.removeItem('shiftData');
-        localStorage.removeItem('shiftFileName');
-    }
-}
-
-// シフトデータをクリア
-function clearShiftData() {
-    if (confirm('シフト表データをクリアしますか？')) {
-        debugLog('シフトデータをクリア');
-        
-        shiftData = {};
-        shiftFileUploaded = false;
-        
-        // グローバルデータもクリア
-        window.shiftData = {};
-        
-        localStorage.removeItem('shiftData');
-        localStorage.removeItem('shiftFileName');
-        
-        updateShiftStatus();
-        hideShiftPreview();
-        
-        if (shiftFileInput) {
-            shiftFileInput.value = '';
-        }
-        
-        // カレンダーを再描画
-        if (typeof renderCalendar === 'function') {
-            renderCalendar();
-        }
-        
-        showShiftSuccess('シフト表データをクリアしました。');
-    }
-}
-
-// シフト状態を更新
-function updateShiftStatus() {
-    const shiftClearBtn = document.getElementById('shift-clear-btn');
-    
-    if (shiftFileUploaded && Object.keys(shiftData).length > 0) {
-        const fileName = localStorage.getItem('shiftFileName') || 'unknown.xlsx';
-        showShiftSuccess(`シフト表「${fileName}」が読み込まれています。`);
-        
-        if (shiftClearBtn) {
-            shiftClearBtn.style.display = 'inline-block';
-        }
-    } else {
-        showShiftStatus('シフト表がアップロードされていません。', 'info');
-        
-        if (shiftClearBtn) {
-            shiftClearBtn.style.display = 'none';
-        }
-    }
-}
-
-// シフトプレビューを表示
-function showShiftPreview() {
-    const previewDiv = document.getElementById('shift-preview');
-    if (!previewDiv) return;
-    
-    const dateKeys = Object.keys(shiftData).sort();
-    if (dateKeys.length === 0) {
-        hideShiftPreview();
-        return;
-    }
-    
-    const previewDates = dateKeys.slice(0, 7);
-    
-    const previewHTML = previewDates.map(date => {
-        const employees = shiftData[date] || [];
-        const employeeList = employees.map(emp => `${emp.name}(${emp.shift})`).join(', ');
-        
-        return `
-            <div class="shift-preview-item">
-                <strong>${formatDateForDisplay(date)}:</strong> ${employeeList || '未設定'}
-            </div>
-        `;
-    }).join('');
-    
-    previewDiv.innerHTML = `
-        <h4>シフトプレビュー（最初の7日分）</h4>
-        ${previewHTML}
-        ${dateKeys.length > 7 ? `<div style="color: #888; text-align: center; padding: 8px;">...他 ${dateKeys.length - 7} 日分</div>` : ''}
-    `;
-    
-    previewDiv.style.display = 'block';
-}
-
-// シフトプレビューを非表示
-function hideShiftPreview() {
-    const previewDiv = document.getElementById('shift-preview');
-    if (previewDiv) {
-        previewDiv.style.display = 'none';
-    }
-}
-
-// 日付を表示用にフォーマット
-function formatDateForDisplay(dateString) {
-    const date = new Date(dateString + 'T00:00:00');
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const weekdays = ['日', '月', '火', '水', '木', '金', '土'];
-    const weekday = weekdays[date.getDay()];
-    
-    return `${month}/${day}(${weekday})`;
-}
-
-// 特定の日のシフト情報を取得（カレンダーから呼び出される）
-function getShiftForDate(dateString) {
-    return shiftData[dateString] || [];
-}
-
-// シフトメッセージ表示関数
-function showShiftStatus(message, type) {
-    if (!shiftStatusDiv) return;
-    
-    shiftStatusDiv.className = `shift-status ${type}`;
-    shiftStatusDiv.textContent = message;
-    shiftStatusDiv.style.display = 'block';
-    
-    debugLog(`ステータス表示: [${type}] ${message}`);
-}
-
-function showShiftSuccess(message) {
-    showShiftStatus(message, 'success');
-}
-
-function showShiftError(message) {
-    showShiftStatus(message, 'error');
-}
-
-// DOM読み込み完了時の初期化
-document.addEventListener('DOMContentLoaded', function() {
-    debugLog('DOMContentLoaded - シフト管理初期化開始');
-    
-    // 少し遅延させて他のスクリプトの読み込みを待つ
-    setTimeout(() => {
-        initializeShiftManagement();
-    }, 1000);
-});
-
-// タブ切り替え時の初期化（設定タブが選択された時）
-document.addEventListener('click', function(event) {
-    if (event.target && event.target.getAttribute('data-tab') === 'settings') {
-        debugLog('設定タブが選択されました');
-        
-        // 少し遅延させてDOM要素が確実に表示された後に初期化
-        setTimeout(() => {
-            if (!window.shiftManagementInitialized) {
-                debugLog('設定タブ選択時の遅延初期化実行');
-                initializeShiftManagement();
-            }
-        }, 200);
-    }
-});
-
-// グローバル関数として公開
-window.getShiftForDate = getShiftForDate;
-window.initializeShiftManagement = initializeShiftManagement;
