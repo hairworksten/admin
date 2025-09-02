@@ -502,15 +502,6 @@ window.getShiftForDate = getShiftForDate;
 window.initializeShiftManagement = initializeShiftManagement;
 window.syncShiftDataWithDatabase = syncShiftDataWithDatabase;
 window.handleShiftDataUpdate = handleShiftDataUpdate;
-        if (error.message.includes('fetch') || 
-            error.message.includes('Failed to fetch') ||
-            error.message.includes('NetworkError')) {
-            debugLog('APIサーバーに接続できません（ネットワークエラー）');
-        }
-        
-        return false;
-    }
-}
 
 // 月別シフトデータを日別に変換
 function convertMonthlyToDailyShifts(monthlyShifts) {
