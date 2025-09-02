@@ -1006,3 +1006,13 @@ async function saveShiftDataToDatabase(shiftData, fileName) {
         debugLog(`データベース保存エラー: ${error.message}`);
         
         // ネットワークエラーの場合は警告のみ
+        if (error.message.includes('fetch') || 
+            error.message.includes('Failed to fetch') ||
+            error.message.includes('NetworkError')) {
+            debugLog('APIサーバーに接続できませんが、ローカルデータは保存されました');
+            throw new Error('ネットワークエラー: APIサーバーに接続できません');
+        }
+        
+        throw error;
+    }
+}
