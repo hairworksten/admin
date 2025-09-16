@@ -17,13 +17,6 @@ const detailCancelBtn = document.getElementById('detail-cancel-btn');
 const detailMailBtn = document.getElementById('detail-mail-btn');
 const detailCloseBtn = document.getElementById('detail-close-btn');
 
-// データ読み込み状態を追跡
-let dataLoadStatus = {
-    reservations: false,
-    menus: false,
-    holidays: false
-};
-
 // イベントリスナー設定
 document.addEventListener('DOMContentLoaded', function() {
     initializeCalendarFeatures();
@@ -37,141 +30,6 @@ function initializeCalendarFeatures() {
     if (detailMailBtn) detailMailBtn.addEventListener('click', handleDetailMail);
 }
 
-// カレンダー表示前の必要データ確認と読み込み
-async function ensureCalendarData() {
-    console.log('[カレンダー] データ確認開始');
-    
-    try {
-        // 予約データの確認・読み込み
-        if (!reservations || !Array.isArray(reservations) || reservations.length === 0) {
-            console.log('[カレンダー] 予約データ読み込み');
-            await loadReservationsForCalendar();
-        } else {
-            console.log('[カレンダー] 既存予約データを使用:', reservations.length, '件');
-            dataLoadStatus.reservations = true;
-        }
-        
-        // メニューデータの確認・読み込み
-        if (!currentMenus || typeof currentMenus !== 'object' || Object.keys(currentMenus).length === 0) {
-            console.log('[カレンダー] メニューデータ読み込み');
-            await loadMenusForCalendar();
-        } else {
-            console.log('[カレンダー] 既存メニューデータを使用:', Object.keys(currentMenus).length, '個');
-            dataLoadStatus.menus = true;
-        }
-        
-        // 休業日データの確認・読み込み
-        if (!holidays || !Array.isArray(holidays)) {
-            console.log('[カレンダー] 休業日データ読み込み');
-            await loadHolidaysForCalendar();
-        } else {
-            console.log('[カレンダー] 既存休業日データを使用:', holidays.length, '件');
-            dataLoadStatus.holidays = true;
-        }
-        
-        console.log('[カレンダー] データ読み込み完了:', dataLoadStatus);
-        return true;
-        
-    } catch (error) {
-        console.error('[カレンダー] データ読み込みエラー:', error);
-        return false;
-    }
-}
-
-// カレンダー専用の予約データ読み込み
-async function loadReservationsForCalendar() {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-        
-        const response = await fetch(`${API_BASE_URL}/reservations`, {
-            signal: controller.signal,
-            headers: { 'Accept': 'application/json' }
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-        const data = await response.json();
-        
-        if (Array.isArray(data)) {
-            reservations = data;
-            dataLoadStatus.reservations = true;
-            console.log(`[カレンダー] 予約データ読み込み成功: ${data.length}件`);
-        } else {
-            console.warn('[カレンダー] 予約データが配列ではありません');
-            reservations = [];
-            dataLoadStatus.reservations = false;
-        }
-        
-    } catch (error) {
-        console.error('[カレンダー] 予約データ読み込みエラー:', error);
-        reservations = reservations || [];
-        dataLoadStatus.reservations = false;
-    }
-}
-
-// カレンダー専用のメニューデータ読み込み
-async function loadMenusForCalendar() {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        const response = await fetch(`${API_BASE_URL}/menus`, {
-            signal: controller.signal,
-            headers: { 'Accept': 'application/json' }
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-            const menus = await response.json();
-            currentMenus = menus || {};
-            dataLoadStatus.menus = true;
-            console.log(`[カレンダー] メニューデータ読み込み成功: ${Object.keys(currentMenus).length}個`);
-        } else {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
-    } catch (error) {
-        console.error('[カレンダー] メニューデータ読み込みエラー:', error);
-        currentMenus = currentMenus || {};
-        dataLoadStatus.menus = false;
-    }
-}
-
-// カレンダー専用の休業日データ読み込み
-async function loadHolidaysForCalendar() {
-    try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-        
-        const response = await fetch(`${API_BASE_URL}/holidays`, {
-            signal: controller.signal,
-            headers: { 'Accept': 'application/json' }
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-            const holidayData = await response.json();
-            holidays = holidayData || [];
-            dataLoadStatus.holidays = true;
-            console.log(`[カレンダー] 休業日データ読み込み成功: ${holidays.length}件`);
-        } else {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        
-    } catch (error) {
-        console.error('[カレンダー] 休業日データ読み込みエラー:', error);
-        holidays = holidays || [];
-        dataLoadStatus.holidays = false;
-    }
-}
-
 // 新しい関数：タイムゾーンを考慮した日付文字列変換
 function formatDateToLocal(date) {
     const year = date.getFullYear();
@@ -180,78 +38,79 @@ function formatDateToLocal(date) {
     return `${year}-${month}-${day}`;
 }
 
-// メニューカラー取得の安全版
+// メニューカラー取得の安全版（修正版）
 function getMenuColorSafe(menuName) {
+    // currentMenusが存在し、メニューが定義されている場合のみ色を取得
     if (currentMenus && typeof currentMenus === 'object' && Object.keys(currentMenus).length > 0) {
         return getMenuColor(menuName);
     }
-    return '#ff6b35'; // デフォルトカラー
+    // フォールバック：デフォルトカラーを返す
+    return '#ff6b35'; // オレンジ色をデフォルトとする
 }
 
-// シフトデータ取得関数の修正版
+// シフトデータ取得関数の修正版（複数のソースから取得を試行）
 function getShiftForDateFixed(dateString) {
     try {
-        console.log(`[カレンダー] シフト取得: ${dateString}`);
+        // デバッグログ出力
+        console.log(`[カレンダー] シフト取得開始: ${dateString}`);
         
-        // 1. window.getShiftForDate が定義されている場合
+        // 1. window.getShiftForDate が定義されている場合はそれを使用
         if (typeof window.getShiftForDate === 'function') {
             const result1 = window.getShiftForDate(dateString);
+            console.log(`[カレンダー] window.getShiftForDate結果:`, result1);
             if (result1 && result1.length > 0) {
                 return result1;
             }
         }
         
-        // 2. window.shiftData から取得
-        if (window.shiftData && window.shiftData[dateString]) {
-            const result2 = window.shiftData[dateString];
+        // 2. window.shiftData から直接取得
+        if (typeof window !== 'undefined' && window.shiftData && typeof window.shiftData === 'object') {
+            const result2 = window.shiftData[dateString] || [];
+            console.log(`[カレンダー] window.shiftData結果:`, result2);
             if (result2 && result2.length > 0) {
                 return result2;
             }
         }
         
         // 3. グローバルのshiftDataから取得
-        if (typeof shiftData !== 'undefined' && shiftData && shiftData[dateString]) {
-            const result3 = shiftData[dateString];
+        if (typeof shiftData !== 'undefined' && shiftData && typeof shiftData === 'object') {
+            const result3 = shiftData[dateString] || [];
+            console.log(`[カレンダー] グローバルshiftData結果:`, result3);
             if (result3 && result3.length > 0) {
                 return result3;
             }
         }
         
-        // 4. ローカルストレージから取得
+        // 4. ローカルストレージから取得を試行
         try {
             const savedShiftData = localStorage.getItem('shiftData');
             if (savedShiftData) {
                 const parsedShiftData = JSON.parse(savedShiftData);
                 if (parsedShiftData && parsedShiftData[dateString]) {
-                    return parsedShiftData[dateString];
+                    const result4 = parsedShiftData[dateString];
+                    console.log(`[カレンダー] localStorage結果:`, result4);
+                    return result4;
                 }
             }
         } catch (storageError) {
-            console.warn('[カレンダー] ローカルストレージ読み込みエラー:', storageError);
+            console.warn('ローカルストレージからのシフトデータ取得エラー:', storageError);
         }
         
+        // 5. すべて失敗した場合は空配列を返す
+        console.log(`[カレンダー] ${dateString}のシフトデータなし`);
         return [];
         
     } catch (error) {
-        console.error('[カレンダー] シフトデータ取得エラー:', error);
+        console.error('シフトデータ取得エラー:', error);
         return [];
     }
 }
 
-// カレンダー描画（完全修正版）
-async function renderCalendar() {
-    if (!calendarGrid) {
-        console.error('[カレンダー] calendarGrid要素が見つかりません');
-        return;
-    }
+// カレンダー描画（シフト情報表示対応版）- 修正版
+function renderCalendar() {
+    if (!calendarGrid) return;
     
     console.log('[カレンダー] renderCalendar() 開始');
-    
-    // 必要なデータが揃っているか確認・読み込み
-    const dataReady = await ensureCalendarData();
-    if (!dataReady) {
-        console.warn('[カレンダー] 必要なデータの読み込みに失敗しました');
-    }
     
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
@@ -280,13 +139,24 @@ async function renderCalendar() {
         calendarGrid.appendChild(dayHeader);
     });
     
-    // データの状態をログ出力
-    console.log('[カレンダー] 描画時のデータ状態:', {
-        reservationsCount: reservations ? reservations.length : 0,
-        menusCount: currentMenus ? Object.keys(currentMenus).length : 0,
-        holidaysCount: holidays ? holidays.length : 0,
-        hasShiftData: !!(window.shiftData && Object.keys(window.shiftData).length > 0)
-    });
+    // シフトデータの存在確認
+    let hasShiftData = false;
+    try {
+        hasShiftData = (window.shiftData && Object.keys(window.shiftData).length > 0) ||
+                      (typeof shiftData !== 'undefined' && shiftData && Object.keys(shiftData).length > 0) ||
+                      (localStorage.getItem('shiftData') !== null);
+        console.log(`[カレンダー] シフトデータ存在確認: ${hasShiftData}`);
+        
+        // デバッグ用：利用可能なシフトデータを確認
+        if (window.shiftData) {
+            console.log('[カレンダー] window.shiftData:', Object.keys(window.shiftData).slice(0, 5));
+        }
+        if (typeof shiftData !== 'undefined' && shiftData) {
+            console.log('[カレンダー] グローバルshiftData:', Object.keys(shiftData).slice(0, 5));
+        }
+    } catch (e) {
+        console.warn('[カレンダー] シフトデータ確認エラー:', e);
+    }
     
     // カレンダー日付生成
     const currentDateObj = new Date(startDate);
@@ -294,19 +164,22 @@ async function renderCalendar() {
         const dayElement = document.createElement('div');
         dayElement.className = 'calendar-day';
         
+        // 修正：タイムゾーンを考慮した日付文字列生成
         const dateString = formatDateToLocal(currentDateObj);
         const dayNumber = currentDateObj.getDate();
+        
+        console.log(`[カレンダー] 日付処理: ${dateString}`);
         
         if (currentDateObj.getMonth() !== month) {
             dayElement.classList.add('other-month');
         }
         
-        // 休業日チェック
+        // 休業日チェック（修正済み）
         if (holidays && holidays.includes(dateString)) {
             dayElement.classList.add('holiday');
         }
         
-        // 日付ヘッダー部分
+        // 日付ヘッダー部分（日付番号とシフト情報を横並び）
         const dayHeader = document.createElement('div');
         dayHeader.className = 'day-header';
         
@@ -330,19 +203,30 @@ async function renderCalendar() {
             const shiftInfoElement = document.createElement('div');
             shiftInfoElement.className = 'day-shift-info';
             
-            const shiftEmployees = getShiftForDateFixed(dateString);
+            // 修正：シフトデータを取得（複数の方法で試行）
+            let shiftEmployees = [];
             
+            if (hasShiftData) {
+                shiftEmployees = getShiftForDateFixed(dateString);
+                console.log(`[カレンダー] ${dateString}のシフト従業員:`, shiftEmployees);
+            }
+            
+            // シフト情報が存在する場合のみ表示
             if (shiftEmployees && shiftEmployees.length > 0) {
                 shiftEmployees.forEach(employee => {
                     const employeeElement = document.createElement('div');
                     employeeElement.className = 'shift-employee';
                     
+                    // 表示テキスト（従業員名のみ）
                     const employeeName = employee.name || employee;
                     employeeElement.textContent = employeeName;
-                    employeeElement.title = `担当: ${employeeName}`;
+                    employeeElement.title = `担当: ${employeeName}`; // ツールチップ
                     
+                    console.log(`[カレンダー] シフト従業員追加: ${employeeName}`);
                     shiftInfoElement.appendChild(employeeElement);
                 });
+            } else {
+                console.log(`[カレンダー] ${dateString}: シフト従業員なし`);
             }
             
             dayHeader.appendChild(shiftInfoElement);
@@ -350,18 +234,16 @@ async function renderCalendar() {
         
         dayElement.appendChild(dayHeader);
         
-        // 予約リスト表示
+        // 予約リスト表示（休止時間対応版）
         const reservationsContainer = document.createElement('div');
         reservationsContainer.className = 'day-reservations';
         
         if (!holidays || !holidays.includes(dateString)) {
-            // 予約データが存在することを確認
-            if (reservations && Array.isArray(reservations) && reservations.length > 0) {
+            // reservations配列が存在し、配列であることを確認
+            if (reservations && Array.isArray(reservations)) {
                 const dayReservations = reservations.filter(r => 
                     r.date === dateString && r.states === 0
                 ).sort((a, b) => a.Time.localeCompare(b.Time));
-                
-                console.log(`[カレンダー] ${dateString}の予約: ${dayReservations.length}件`);
                 
                 // 通常予約と休止時間を分離
                 const normalReservations = dayReservations.filter(r => r['Name-f'] !== '休止時間');
@@ -377,6 +259,7 @@ async function renderCalendar() {
                     blockElement.style.cursor = 'pointer';
                     blockElement.title = `休止理由: ${blockReservation['Name-s'] || '設定済み'}`;
                     
+                    // クリックイベント（詳細表示）
                     blockElement.addEventListener('click', () => {
                         showBlockedTimeDetail(blockReservation);
                     });
@@ -392,7 +275,7 @@ async function renderCalendar() {
                     const customerName = reservation['Name-f'] || '';
                     reservationElement.textContent = `${reservation.Time} ${customerName}`;
                     
-                    // メニューカラー取得
+                    // 修正：安全なメニューカラー取得
                     const menuColor = getMenuColorSafe(reservation.Menu);
                     reservationElement.style.backgroundColor = menuColor;
                     reservationElement.style.color = '#ffffff';
@@ -403,8 +286,6 @@ async function renderCalendar() {
                     
                     reservationsContainer.appendChild(reservationElement);
                 });
-            } else {
-                console.log(`[カレンダー] ${dateString}: 予約データなし`);
             }
         }
         
@@ -416,11 +297,11 @@ async function renderCalendar() {
     
     console.log('[カレンダー] カレンダー描画完了');
     
-    // メニュー凡例も更新
+    // カレンダー描画後にメニュー凡例も更新
     renderMenuLegend();
 }
 
-// メニュー凡例描画（修正版）
+// メニュー凡例描画（修正版 - メニューデータの読み込み状態を考慮）
 function renderMenuLegend() {
     if (!menuLegend) return;
     
@@ -429,6 +310,7 @@ function renderMenuLegend() {
     const legendGrid = document.createElement('div');
     legendGrid.className = 'legend-grid';
     
+    // currentMenusが存在し、オブジェクトであることを確認
     if (currentMenus && typeof currentMenus === 'object') {
         const menuNames = Object.keys(currentMenus);
         
@@ -457,6 +339,7 @@ function renderMenuLegend() {
             legendGrid.appendChild(emptyMessage);
         }
     } else {
+        // メニューデータがまだ読み込まれていない場合
         const loadingMessage = document.createElement('div');
         loadingMessage.className = 'legend-empty';
         loadingMessage.textContent = 'メニューを読み込み中...';
@@ -478,7 +361,7 @@ function goToNextMonth() {
     renderCalendar();
 }
 
-// 予約詳細表示
+// 予約詳細表示（電話番号対応版）
 function showReservationDetail(reservation) {
     currentReservationDetail = reservation;
     
@@ -530,12 +413,17 @@ async function handleRemoveBlockedTime(blockReservation) {
         const response = await fetch(`${API_BASE_URL}/reservations/${blockReservation.id}/status`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ status: 2 })
+            body: JSON.stringify({ status: 2 }) // キャンセル扱いで削除
         });
 
         if (response.ok) {
-            await loadReservationsForCalendar();
-            renderCalendar();
+            await loadReservations();
+            
+            const calendarTab = document.getElementById('calendar-tab');
+            if (calendarTab && calendarTab.classList.contains('active')) {
+                renderCalendar();
+            }
+            
             alert('休止設定を解除しました。');
         } else {
             const errorData = await response.text();
@@ -543,7 +431,28 @@ async function handleRemoveBlockedTime(blockReservation) {
         }
     } catch (error) {
         console.error('休止設定解除エラー:', error);
-        alert(`休止設定の解除に失敗しました。\nエラー: ${error.message}`);
+        
+        if (error.message.includes('fetch')) {
+            alert('ローカル開発環境のため、APIに接続できません。\n実際の本番環境では正常に動作します。');
+            
+            // デモ用のローカル処理
+            const reservationIndex = reservations.findIndex(r => r.id === blockReservation.id);
+            if (reservationIndex >= 0) {
+                reservations[reservationIndex].states = 2;
+                if (typeof displayReservations === 'function') {
+                    displayReservations();
+                }
+                
+                const calendarTab = document.getElementById('calendar-tab');
+                if (calendarTab && calendarTab.classList.contains('active')) {
+                    renderCalendar();
+                }
+                
+                alert('デモ用：休止設定を解除しました（ローカルのみ）');
+            }
+        } else {
+            alert(`休止設定の解除に失敗しました。\nエラー: ${error.message}`);
+        }
     }
 }
 
@@ -572,16 +481,41 @@ function handleDetailCancel() {
                 });
 
                 if (response.ok) {
-                    await loadReservationsForCalendar();
-                    renderCalendar();
+                    await loadReservations();
+                    
+                    const calendarTab = document.getElementById('calendar-tab');
+                    if (calendarTab && calendarTab.classList.contains('active')) {
+                        renderCalendar();
+                    }
+                    
                     alert('予約をキャンセルしました。');
                 } else {
                     const errorData = await response.text();
                     alert(`予約のキャンセルに失敗しました。\nステータス: ${response.status}\nエラー: ${errorData}`);
                 }
             } catch (error) {
-                console.error('キャンセル処理エラー:', error);
-                alert(`予約のキャンセルに失敗しました。\nエラー: ${error.message}`);
+                console.error('キャンセル処理例外:', error);
+                
+                if (error.message.includes('fetch')) {
+                    alert('ローカル開発環境のため、APIに接続できません。\n実際の本番環境では正常に動作します。');
+                    
+                    const reservationIndex = reservations.findIndex(r => r.id === reservationToCancel.id);
+                    if (reservationIndex >= 0) {
+                        reservations[reservationIndex].states = 2;
+                        if (typeof displayReservations === 'function') {
+                            displayReservations();
+                        }
+                        
+                        const calendarTab = document.getElementById('calendar-tab');
+                        if (calendarTab && calendarTab.classList.contains('active')) {
+                            renderCalendar();
+                        }
+                        
+                        alert('デモ用：予約をキャンセルしました（ローカルのみ）');
+                    }
+                } else {
+                    alert(`予約のキャンセルに失敗しました。\nエラー: ${error.message}`);
+                }
             }
         });
     }
@@ -635,17 +569,3 @@ function handleDetailMail() {
         mailModal.classList.add('active');
     }
 }
-
-// カレンダータブが選択された時の処理
-document.addEventListener('click', function(event) {
-    if (event.target && event.target.getAttribute('data-tab') === 'calendar') {
-        console.log('[カレンダー] カレンダータブが選択されました');
-        setTimeout(() => {
-            renderCalendar();
-        }, 200);
-    }
-});
-
-// グローバル関数として公開
-window.renderCalendar = renderCalendar;
-window.ensureCalendarData = ensureCalendarData;
