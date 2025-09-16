@@ -1,5 +1,5 @@
 // APIベースURL
-const API_BASE_URL = 'https://reservation-api-v2-knn6yth7rq-an.a.run.app/api';
+const API_BASE_URL = 'https://reservation-api-knn6yth7rq-an.a.run.app/api';
 
 // メニューカラー定義
 const MENU_COLORS = [
@@ -181,53 +181,37 @@ function showLoginScreen() {
     hideError();
 }
 
-// 初期データ読み込み（修正版 - エラー処理強化）
+// 初期データ読み込み（簡素化版）
 async function loadInitialData() {
     try {
         console.log('[Auth] 初期データ読み込み開始');
         
-        // 基本設定を並行読み込み（エラーが発生しても継続）
-        const settingsPromises = [
-            loadBreakMode().catch(err => console.warn('[Auth] 休憩モード読み込みエラー:', err)),
-            loadPopulation().catch(err => console.warn('[Auth] 人数読み込みエラー:', err)),
-            loadCustomSettings().catch(err => console.warn('[Auth] カスタム設定読み込みエラー:', err)),
-            loadHolidays().catch(err => console.warn('[Auth] 休業日読み込みエラー:', err))
-        ];
-        
-        await Promise.allSettled(settingsPromises);
+        // 基本設定を並行読み込み
+        await Promise.all([
+            loadBreakMode(),
+            loadPopulation(),
+            loadHolidays(),
+            loadCustomSettings()
+        ]);
         
         // メニューを先に読み込む（予約表示で必要）
-        try {
-            await loadMenus();
-            console.log('[Auth] メニュー読み込み完了');
-        } catch (error) {
-            console.error('[Auth] メニュー読み込みエラー:', error);
-            // メニューが読み込めない場合はデフォルト値を設定
-            currentMenus = {};
-        }
+        await loadMenus();
+        console.log('[Auth] メニュー読み込み完了');
         
         // 予約データを読み込み（メニュー読み込み後）
-        try {
-            await loadReservations();
-            console.log('[Auth] 予約読み込み完了');
-        } catch (error) {
-            console.error('[Auth] 予約読み込みエラー:', error);
-            // 予約データが読み込めない場合は空配列を設定
-            reservations = [];
-        }
+        await loadReservations();
+        console.log('[Auth] 予約読み込み完了');
         
-        // その他のデータ読み込み（エラーが発生しても継続）
-        const otherDataPromises = [
-            loadMailTemplates().catch(err => console.warn('[Auth] メールテンプレート読み込みエラー:', err)),
-            loadNotices().catch(err => console.warn('[Auth] お知らせ読み込みエラー:', err))
-        ];
-        
-        await Promise.allSettled(otherDataPromises);
+        // その他
+        await Promise.all([
+            loadMailTemplates(),
+            loadNotices()
+        ]);
         
         // シフトデータの確認
         await checkAndLoadShiftData();
         
-        // カレンダー初期描画（データが揃ってから）
+        // カレンダー初期描画
         const calendarTab = document.getElementById('calendar-tab');
         if (calendarTab && calendarTab.classList.contains('active')) {
             setTimeout(() => {
@@ -237,38 +221,33 @@ async function loadInitialData() {
                 if (typeof renderMenuLegend === 'function') {
                     renderMenuLegend();
                 }
-            }, 500); // 少し遅延を増やして確実にデータが準備される時間を確保
+            }, 200);
         }
         
         console.log('[Auth] 初期データ読み込み完了');
         
     } catch (error) {
-        console.error('[Auth] 初期データ読み込み全体エラー:', error);
-        // 完全な失敗でもUIは表示する
-        setTimeout(() => {
-            if (typeof displayReservations === 'function') {
-                displayReservations();
-            }
-        }, 1000);
+        console.error('[Auth] 初期データ読み込みエラー:', error);
+        alert('データの読み込みに失敗しました。手動更新ボタンで再試行してください。');
     }
 }
 
-// 予約データ読み込み（エラー処理強化版）
+// 予約データ読み込み（タイムアウト付き）
 async function loadReservations() {
     try {
         console.log('[Auth] 予約データ読み込み開始');
         
+        // 10秒タイムアウトを設定
         const controller = new AbortController();
         const timeoutId = setTimeout(() => {
             controller.abort();
-            console.error('[Auth] 予約データ読み込みタイムアウト（15秒）');
-        }, 15000); // タイムアウトを15秒に延長
+            console.error('[Auth] 予約データ読み込みタイムアウト');
+        }, 10000);
         
         const response = await fetch(`${API_BASE_URL}/reservations`, {
             signal: controller.signal,
             headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
+                'Accept': 'application/json'
             }
         });
         
@@ -285,11 +264,9 @@ async function loadReservations() {
             console.log(`[Auth] 予約データ読み込み成功: ${data.length}件`);
             
             // 表示更新
-            setTimeout(() => {
-                if (typeof displayReservations === 'function') {
-                    displayReservations();
-                }
-            }, 100);
+            if (typeof displayReservations === 'function') {
+                displayReservations();
+            }
         } else {
             console.warn('[Auth] 予約データが配列ではありません:', typeof data);
             reservations = [];
@@ -301,34 +278,26 @@ async function loadReservations() {
         
         // エラーの種類に応じて処理
         if (error.name === 'AbortError') {
-            console.error('[Auth] 予約データ読み込みタイムアウト');
-        } else if (error.message.includes('Failed to fetch')) {
-            console.error('[Auth] ネットワーク接続エラー');
+            console.error('[Auth] リクエストタイムアウト');
         }
         
         // 表示は空の状態で更新
-        setTimeout(() => {
-            if (typeof displayReservations === 'function') {
-                displayReservations();
-            }
-        }, 100);
+        if (typeof displayReservations === 'function') {
+            displayReservations();
+        }
     }
 }
 
-// メニューデータ読み込み（エラー処理強化版）
+// メニューデータ読み込み（タイムアウト付き）
 async function loadMenus() {
     try {
         console.log('[Auth] メニューデータ読み込み開始');
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
         
         const response = await fetch(`${API_BASE_URL}/menus`, {
-            signal: controller.signal,
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
+            signal: controller.signal
         });
         
         clearTimeout(timeoutId);
@@ -352,57 +321,15 @@ async function loadMenus() {
                     if (typeof renderMenuLegend === 'function') {
                         renderMenuLegend();
                     }
-                }, 100);
+                }, 50);
             }
         } else {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            throw new Error(`HTTP ${response.status}`);
         }
         
     } catch (error) {
         console.error('[Auth] メニューデータ読み込みエラー:', error);
         currentMenus = {};
-    }
-}
-
-// 休業日データ読み込み（修正版）
-async function loadHolidays() {
-    try {
-        console.log('[Auth] 休業日データ読み込み開始');
-        
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-        
-        const response = await fetch(`${API_BASE_URL}/holidays`, {
-            signal: controller.signal,
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
-        });
-        
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-            const holidayData = await response.json();
-            holidays = Array.isArray(holidayData) ? holidayData : [];
-            console.log(`[Auth] 休業日データ読み込み成功: ${holidays.length}件`);
-            
-            if (typeof displayHolidays === 'function') {
-                displayHolidays(holidays);
-            }
-            
-            // カレンダーが表示されている場合は更新
-            const calendarTab = document.getElementById('calendar-tab');
-            if (calendarTab && calendarTab.classList.contains('active') && typeof renderCalendar === 'function') {
-                renderCalendar();
-            }
-        } else {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-        }
-        
-    } catch (error) {
-        console.error('[Auth] 休業日データ読み込みエラー:', error);
-        holidays = [];
     }
 }
 
@@ -436,34 +363,27 @@ async function loadCustomSettings() {
     }
 }
 
-// 手動更新ボタンを追加（改善版）
+// 手動更新ボタンを追加（シンプル版）
 function addManualRefreshButton() {
     const navbar = document.querySelector('.navbar .nav-buttons');
     if (navbar && !document.getElementById('manual-refresh-btn')) {
         const refreshBtn = document.createElement('button');
         refreshBtn.id = 'manual-refresh-btn';
         refreshBtn.className = 'btn btn-secondary';
-        refreshBtn.innerHTML = '🔄 データ更新';
-        refreshBtn.title = 'すべてのデータを手動で更新します';
+        refreshBtn.innerHTML = '🔄 更新';
+        refreshBtn.title = 'データを手動で更新します';
         
         refreshBtn.addEventListener('click', async function() {
             this.disabled = true;
             this.innerHTML = '⏳ 更新中';
             
             try {
-                console.log('[Auth] 手動データ更新開始');
-                
-                // 全データを並行して更新
-                const updatePromises = [
-                    loadMenus().catch(err => console.warn('メニュー更新エラー:', err)),
-                    loadReservations().catch(err => console.warn('予約更新エラー:', err)),
-                    loadBreakMode().catch(err => console.warn('休憩モード更新エラー:', err)),
-                    loadPopulation().catch(err => console.warn('人数更新エラー:', err)),
-                    loadCustomSettings().catch(err => console.warn('カスタム設定更新エラー:', err)),
-                    loadHolidays().catch(err => console.warn('休業日更新エラー:', err))
-                ];
-                
-                await Promise.allSettled(updatePromises);
+                // メニューを先に読み込んでから予約を読み込み
+                await loadMenus();
+                await loadReservations();
+                await loadBreakMode();
+                await loadPopulation();
+                await loadCustomSettings();
                 
                 // 表示更新
                 if (typeof displayReservations === 'function') {
@@ -479,10 +399,8 @@ function addManualRefreshButton() {
                 }
                 
                 this.innerHTML = '✓ 完了';
-                console.log('[Auth] 手動データ更新完了');
-                
                 setTimeout(() => {
-                    this.innerHTML = '🔄 データ更新';
+                    this.innerHTML = '🔄 更新';
                     this.disabled = false;
                 }, 2000);
                 
@@ -490,7 +408,7 @@ function addManualRefreshButton() {
                 console.error('手動更新エラー:', error);
                 this.innerHTML = '⚠ エラー';
                 setTimeout(() => {
-                    this.innerHTML = '🔄 データ更新';
+                    this.innerHTML = '🔄 更新';
                     this.disabled = false;
                 }, 2000);
             }
@@ -569,7 +487,7 @@ async function loadBreakMode() {
             breakMode = { turn: false, custom: '' };
         }
         
-        // サイネージ表示を更新
+        // サイネージUIの更新
         updateSignageDisplay();
         
     } catch (error) {
@@ -1125,6 +1043,26 @@ async function loadMailTemplates() {
         }
     } catch (error) {
         console.error('Error loading mail templates:', error);
+    }
+}
+
+// 定休日読み込み
+async function loadHolidays() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/holidays`);
+        const holidayData = await response.json();
+        holidays = holidayData;
+        if (typeof displayHolidays === 'function') {
+            displayHolidays(holidayData);
+        }
+        
+        const calendarTab = document.getElementById('calendar-tab');
+        if (calendarTab && calendarTab.classList.contains('active') && typeof renderCalendar === 'function') {
+            renderCalendar();
+        }
+    } catch (error) {
+        console.error('Error loading holidays:', error);
+        holidays = [];
     }
 }
 
