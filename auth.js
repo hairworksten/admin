@@ -1,5 +1,5 @@
 // APIベースURL
-const API_BASE_URL = 'https://reservation-api-knn6yth7rq-an.a.run.app/api';
+const API_BASE_URL = 'https://reservation-api-v2-knn6yth7rq-an.a.run.app/api';
 
 // メニューカラー定義
 const MENU_COLORS = [
