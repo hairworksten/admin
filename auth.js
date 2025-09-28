@@ -232,23 +232,22 @@ async function loadInitialData() {
     }
 }
 
-// 予約データ読み込み（タイムアウト付き）
 async function loadReservations() {
     try {
         console.log('[Auth] 予約データ読み込み開始');
         
-        // 10秒タイムアウトを設定
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => {
-            controller.abort();
-            console.error('[Auth] 予約データ読み込みタイムアウト');
-        }, 10000);
+        // 3ヶ月前から1ヶ月後までのデータのみ取得
+        const today = new Date();
+        const fromDate = new Date(today.getFullYear(), today.getMonth() - 3, 1).toISOString().split('T')[0];
+        const toDate = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString().split('T')[0];
         
-        const response = await fetch(`${API_BASE_URL}/reservations`, {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        
+        // クエリパラメータで期間制限
+        const response = await fetch(`${API_BASE_URL}/reservations?from=${fromDate}&to=${toDate}`, {
             signal: controller.signal,
-            headers: {
-                'Accept': 'application/json'
-            }
+            headers: { 'Accept': 'application/json' }
         });
         
         clearTimeout(timeoutId);
@@ -261,27 +260,17 @@ async function loadReservations() {
         
         if (Array.isArray(data)) {
             reservations = data;
-            console.log(`[Auth] 予約データ読み込み成功: ${data.length}件`);
+            console.log(`[Auth] 予約データ読み込み成功: ${data.length}件 (${fromDate}～${toDate})`);
             
-            // 表示更新
             if (typeof displayReservations === 'function') {
                 displayReservations();
             }
-        } else {
-            console.warn('[Auth] 予約データが配列ではありません:', typeof data);
-            reservations = [];
         }
         
     } catch (error) {
         console.error('[Auth] 予約データ読み込みエラー:', error);
         reservations = [];
         
-        // エラーの種類に応じて処理
-        if (error.name === 'AbortError') {
-            console.error('[Auth] リクエストタイムアウト');
-        }
-        
-        // 表示は空の状態で更新
         if (typeof displayReservations === 'function') {
             displayReservations();
         }
