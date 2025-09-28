@@ -148,15 +148,11 @@ function switchTab(tabName) {
         }
     }
 }
-function displayReservations() {
-    console.log('[予約表示] displayReservations() 開始');
-    console.log('[予約表示] 現在の予約データ:', reservations);
-    console.log('[予約表示] 予約データ型:', typeof reservations);
-    console.log('[予約表示] 予約データ長:', Array.isArray(reservations) ? reservations.length : 'Array以外');
 
+// 予約表示（休憩モード対応版、休止時間除外版）
+function displayReservations() {
     // 休憩モード時は今日の予約表示を修正
     if (breakMode && breakMode.turn) {
-        console.log('[予約表示] 休憩モード中');
         if (todayReservationsDiv) {
             todayReservationsDiv.innerHTML = `
                 <div style="text-align: center; padding: 20px; background-color: rgba(220, 53, 69, 0.2); border: 2px solid #dc3545; border-radius: 10px; margin: 20px 0;">
@@ -166,77 +162,34 @@ function displayReservations() {
             `;
         }
     } else {
-        // 通常営業時の予約表示（修正版）
+        // 通常営業時の予約表示（休止時間除外版）
         const today = new Date().toISOString().split('T')[0];
-        console.log('[予約表示] 今日の日付:', today);
         
-        // reservations配列の存在確認を強化
-        if (!reservations) {
-            console.warn('[予約表示] reservations がnullまたはundefined');
-            reservations = []; // 空配列で初期化
-        }
-        
-        if (!Array.isArray(reservations)) {
-            console.warn('[予約表示] reservations がArray型ではない:', typeof reservations);
-            // オブジェクトの場合は配列に変換を試行
-            if (typeof reservations === 'object' && reservations !== null) {
-                try {
-                    const keys = Object.keys(reservations);
-                    reservations = keys.map(key => {
-                        const item = reservations[key];
-                        return { ...item, id: item.id || key };
-                    });
-                    console.log('[予約表示] オブジェクトを配列に変換:', reservations.length);
-                } catch (conversionError) {
-                    console.error('[予約表示] 配列変換エラー:', conversionError);
-                    reservations = [];
+        // reservations配列が存在することを確認し、休止時間を除外
+        const todayReservations = (reservations && Array.isArray(reservations)) ? 
+            reservations.filter(r => 
+                r.date >= today && 
+                r.states === 0 && 
+                r['Name-f'] !== '休止時間' // 休止時間を除外
+            ).sort((a, b) => {
+                if (a.date === b.date) {
+                    return a.Time.localeCompare(b.Time);
                 }
-            } else {
-                reservations = [];
-            }
-        }
-        
-        // 今日以降の予約をフィルタリング（休止時間を除外）
-        const todayReservations = reservations.filter(r => {
-            if (!r) return false;
-            
-            const isToday = r.date >= today;
-            const isActive = r.states === 0;
-            const isNotBlocked = r['Name-f'] !== '休止時間';
-            
-            console.log(`[予約表示] 予約チェック ${r.id || 'ID不明'}: 日付=${r.date}, 今日以降=${isToday}, アクティブ=${isActive}, 非休止=${isNotBlocked}`);
-            
-            return isToday && isActive && isNotBlocked;
-        }).sort((a, b) => {
-            // 日付と時間でソート
-            if (a.date === b.date) {
-                return a.Time.localeCompare(b.Time);
-            }
-            return a.date.localeCompare(b.date);
-        });
-
-        console.log('[予約表示] フィルタ後の今日の予約:', todayReservations.length);
+                return a.date.localeCompare(b.date);
+            }) : [];
 
         if (todayReservationsDiv) {
-            const html = renderReservationsList(todayReservations, 'today');
-            console.log('[予約表示] 生成されたHTML長:', html.length);
-            todayReservationsDiv.innerHTML = html;
-        } else {
-            console.error('[予約表示] todayReservationsDiv が見つかりません');
+            todayReservationsDiv.innerHTML = renderReservationsList(todayReservations, 'today');
         }
     }
 
     // 履歴は休止時間を除外
     const historyReservations = getFilteredReservations();
-    console.log('[予約表示] 履歴予約数:', historyReservations.length);
-    
     if (reservationHistoryDiv) {
-        const historyHtml = renderReservationsList(historyReservations, 'history');
-        reservationHistoryDiv.innerHTML = historyHtml;
-    } else {
-        console.error('[予約表示] reservationHistoryDiv が見つかりません');
+        reservationHistoryDiv.innerHTML = renderReservationsList(historyReservations, 'history');
     }
 }
+
 // 検索フィルター適用（休止時間除外版）
 function getFilteredReservations() {
     // reservations配列が存在することを確認
@@ -293,23 +246,14 @@ function handleClearSearch() {
     if (searchDateToInput) searchDateToInput.value = '';
     displayReservations();
 }
+
+// 予約リストHTML生成（電話番号対応版）
 function renderReservationsList(reservationsList, type) {
-    console.log(`[予約リスト] renderReservationsList開始: ${type}, 件数: ${reservationsList ? reservationsList.length : 'null'}`);
-    
-    if (!reservationsList || !Array.isArray(reservationsList) || reservationsList.length === 0) {
-        const emptyMessage = type === 'today' ? '今日の予約がありません。' : '予約がありません。';
-        console.log(`[予約リスト] 空のリスト: ${emptyMessage}`);
-        return `<p style="text-align: center; color: #888; padding: 20px;">${emptyMessage}</p>`;
+    if (!reservationsList || reservationsList.length === 0) {
+        return '<p>予約がありません。</p>';
     }
 
-    const renderedItems = reservationsList.map((reservation, index) => {
-        console.log(`[予約リスト] 予約 ${index + 1}/${reservationsList.length}:`, reservation);
-        
-        if (!reservation || typeof reservation !== 'object') {
-            console.warn(`[予約リスト] 無効な予約データ:`, reservation);
-            return '';
-        }
-        
+    return reservationsList.map(reservation => {
         const statusText = getStatusText(reservation.states);
         const statusClass = getStatusClass(reservation.states);
         const customerName = reservation['Name-f'] || '';
@@ -341,11 +285,11 @@ function renderReservationsList(reservationsList, type) {
         return `
             <div class="reservation-item">
                 <div class="reservation-header">
-                    <span class="reservation-time">${reservation.Time || '時間不明'}</span>
+                    <span class="reservation-time">${reservation.Time}</span>
                     <span class="reservation-status ${statusClass}">${statusText}</span>
                 </div>
                 <div class="reservation-info">
-                    <div><strong>日付:</strong> ${reservation.date || '日付不明'}</div>
+                    <div><strong>日付:</strong> ${reservation.date}</div>
                     <div><strong>お名前:</strong> ${customerName}</div>
                     <div><strong>電話番号:</strong> ${phoneNumber}</div>
                     <div><strong>メニュー:</strong> ${reservation.Menu || ''}</div>
@@ -357,10 +301,7 @@ function renderReservationsList(reservationsList, type) {
                 </div>
             </div>
         `;
-    }).filter(html => html !== '').join('');
-
-    console.log(`[予約リスト] 生成完了: ${renderedItems.length > 0 ? 'HTML生成済み' : '空のHTML'}`);
-    return renderedItems || `<p style="text-align: center; color: #888; padding: 20px;">表示できる予約がありません。</p>`;
+    }).join('');
 }
 
 // ステータステキスト取得
