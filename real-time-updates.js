@@ -1,4 +1,4 @@
-// リアルタイム更新機能 - Server-Sent Events (SSE) + Firestore リスナー実装
+// リアルタイム更新機能 - 最適化版
 
 class RealtimeUpdates {
     constructor() {
@@ -10,6 +10,12 @@ class RealtimeUpdates {
         this.maxReconnectAttempts = 10;
         this.isConnected = false;
         this.firestoreEnabled = false;
+        
+        // 最適化: 更新頻度制限用
+        this.lastPopulationUpdate = 0;
+        this.lastBreakModeUpdate = 0;
+        this.populationUpdateThrottle = 30000; // 30秒
+        this.breakModeUpdateThrottle = 5000; // 5秒
         
         this.init();
     }
@@ -152,7 +158,10 @@ class RealtimeUpdates {
     }
     
     handleServerMessage(data) {
-        console.log('[リアルタイム更新] SSEメッセージ受信:', data.type, data);
+        // 最適化: heartbeatは詳細ログを出さない
+        if (data.type !== 'heartbeat') {
+            console.log('[リアルタイム更新] SSEメッセージ受信:', data.type, data);
+        }
         
         switch (data.type) {
             case 'connected':
@@ -160,7 +169,7 @@ class RealtimeUpdates {
                 break;
                 
             case 'heartbeat':
-                // ハートビート - 何もしない
+                // ハートビートは無視（ログも出さない）
                 break;
                 
             case 'reservation_added':
@@ -253,6 +262,14 @@ class RealtimeUpdates {
     }
     
     handleBreakModeUpdated(data, source = 'unknown') {
+        // 最適化: 頻繁な更新を制限
+        const now = Date.now();
+        if (now - this.lastBreakModeUpdate < this.breakModeUpdateThrottle) {
+            console.log('[リアルタイム更新] 休憩モード更新をスロットル');
+            return;
+        }
+        this.lastBreakModeUpdate = now;
+        
         console.log(`[リアルタイム更新] 休憩モードが更新されました (${source}):`, data);
         
         // グローバルの休憩モード状態を更新
@@ -279,6 +296,14 @@ class RealtimeUpdates {
     }
     
     handlePopulationUpdated(data, source = 'unknown') {
+        // 最適化: 頻繁な更新を制限
+        const now = Date.now();
+        if (now - this.lastPopulationUpdate < this.populationUpdateThrottle) {
+            console.log('[リアルタイム更新] 人数更新をスロットル');
+            return;
+        }
+        this.lastPopulationUpdate = now;
+        
         console.log(`[リアルタイム更新] 待ち人数が更新されました (${source}):`, data.count);
         
         // 現在の待ち人数を更新
@@ -287,7 +312,7 @@ class RealtimeUpdates {
             currentPopulationSpan.textContent = data.count;
         }
         
-        // 軽い更新なので通知は控えめに
+        // 最適化: 人数更新の通知は控えめに
         const message = source === 'firestore' ? 
             `外部から待ち人数更新: ${data.count}人` :
             `待ち人数: ${data.count}人`;
@@ -370,6 +395,13 @@ class RealtimeUpdates {
             document.body.appendChild(notificationArea);
         }
         
+        // 最適化: 同時に表示する通知数を制限
+        const existingNotifications = notificationArea.children;
+        if (existingNotifications.length >= 3) {
+            // 古い通知を削除
+            notificationArea.removeChild(existingNotifications[0]);
+        }
+        
         // 通知要素を作成
         const notification = document.createElement('div');
         notification.style.cssText = `
@@ -430,7 +462,7 @@ class RealtimeUpdates {
     }
     
     showConnectionStatus(status, attempts = 0) {
-        // 接続状態表示エリアを探すまたは作成
+        // 最適化: 接続状態の表示頻度を制限
         let statusArea = document.getElementById('connection-status');
         if (!statusArea) {
             statusArea = document.createElement('div');
