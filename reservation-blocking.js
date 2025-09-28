@@ -122,19 +122,49 @@ async function handleBlockDateChange() {
     await displayAvailableBlockTimeSlots(selectedDate);
 }
 
-// 利用可能な時間スロットを表示（複数選択対応）
+// 修正版の displayAvailableBlockTimeSlots 関数
 async function displayAvailableBlockTimeSlots(date) {
     if (!blockTimeslotsDiv) return;
     
     blockTimeslotsDiv.innerHTML = '<div style="color: #ffffff; text-align: center; padding: 10px;">時間を確認しています...</div>';
     
     try {
-        // 既存の予約を取得
-        const response = await fetch(`${API_BASE_URL}/reservations`);
-        const allReservations = await response.json();
+        let dayReservations = [];
         
-        const dayReservations = Array.isArray(allReservations) ? 
-            allReservations.filter(r => r.date === date && r.states === 0) : [];
+        // タイムアウト付きでAPI接続を試行
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            console.error('[休止設定] 予約データ取得タイムアウト');
+        }, 8000); // 8秒でタイムアウト
+        
+        try {
+            const response = await fetch(`${API_BASE_URL}/reservations`, {
+                signal: controller.signal,
+                headers: { 'Accept': 'application/json' }
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const allReservations = await response.json();
+            dayReservations = Array.isArray(allReservations) ? 
+                allReservations.filter(r => r.date === date && r.states === 0) : [];
+                
+        } catch (fetchError) {
+            clearTimeout(timeoutId);
+            console.warn('[休止設定] API取得失敗、ローカルデータを使用:', fetchError.message);
+            
+            // フォールバック：グローバルのreservations配列を使用
+            if (typeof reservations !== 'undefined' && Array.isArray(reservations)) {
+                dayReservations = reservations.filter(r => r.date === date && r.states === 0);
+            } else {
+                dayReservations = [];
+            }
+        }
         
         // 平日・土日祝の判定
         const isWeekend = isWeekendOrHolidayForBlock(date);
@@ -181,13 +211,16 @@ async function displayAvailableBlockTimeSlots(date) {
         });
         
         blockTimeslotsDiv.appendChild(timeSlotsContainer);
-        
-        // 選択状態のリセット
         selectedBlockTimeSlots = [];
         
     } catch (error) {
-        console.error('Error loading time slots:', error);
-        blockTimeslotsDiv.innerHTML = '<div style="color: #dc3545; text-align: center; padding: 20px;">時間スロットの取得に失敗しました</div>';
+        console.error('[休止設定] 時間スロット取得エラー:', error);
+        blockTimeslotsDiv.innerHTML = `
+            <div style="color: #dc3545; text-align: center; padding: 20px;">
+                <p>時間スロットの取得に失敗しました</p>
+                <button onclick="handleBlockDateChange()" class="btn btn-secondary btn-small">再試行</button>
+            </div>
+        `;
     }
 }
 
