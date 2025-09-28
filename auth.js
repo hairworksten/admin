@@ -242,7 +242,9 @@ async function loadReservations() {
         const toDate = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString().split('T')[0];
         
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // タイムアウト延長
+        
+        console.log(`[Auth] 予約データ取得範囲: ${fromDate} ～ ${toDate}`);
         
         // クエリパラメータで期間制限
         const response = await fetch(`${API_BASE_URL}/reservations?from=${fromDate}&to=${toDate}`, {
@@ -257,19 +259,61 @@ async function loadReservations() {
         }
         
         const data = await response.json();
+        console.log('[Auth] API応答データ:', data);
+        console.log('[Auth] API応答タイプ:', typeof data);
         
+        // データの形式を確認
         if (Array.isArray(data)) {
             reservations = data;
             console.log(`[Auth] 予約データ読み込み成功: ${data.length}件 (${fromDate}～${toDate})`);
-            
-            if (typeof displayReservations === 'function') {
-                displayReservations();
+        } else if (data && typeof data === 'object') {
+            // オブジェクト形式の場合
+            if (data.reservations && Array.isArray(data.reservations)) {
+                reservations = data.reservations;
+                console.log(`[Auth] 予約データ読み込み成功: ${data.reservations.length}件 (オブジェクト形式)`);
+            } else if (data.success && data.data && Array.isArray(data.data)) {
+                reservations = data.data;
+                console.log(`[Auth] 予約データ読み込み成功: ${data.data.length}件 (success形式)`);
+            } else {
+                // オブジェクトのプロパティを配列に変換
+                const keys = Object.keys(data);
+                reservations = keys.map(key => {
+                    const item = data[key];
+                    if (typeof item === 'object' && item !== null) {
+                        return { ...item, id: item.id || key };
+                    }
+                    return null;
+                }).filter(item => item !== null);
+                console.log(`[Auth] オブジェクトから配列に変換: ${reservations.length}件`);
             }
+        } else {
+            console.warn('[Auth] 予期しないデータ形式:', data);
+            reservations = [];
+        }
+        
+        // 表示を更新
+        if (typeof displayReservations === 'function') {
+            displayReservations();
         }
         
     } catch (error) {
         console.error('[Auth] 予約データ読み込みエラー:', error);
-        reservations = [];
+        
+        // エラー時もreservationsを初期化
+        if (!Array.isArray(reservations)) {
+            reservations = [];
+        }
+        
+        // UIにエラー表示
+        if (todayReservationsDiv) {
+            todayReservationsDiv.innerHTML = `
+                <div style="color: #dc3545; text-align: center; padding: 20px; border: 2px solid #dc3545; border-radius: 8px;">
+                    <h4>予約データの読み込みに失敗しました</h4>
+                    <p>エラー: ${error.message}</p>
+                    <button onclick="loadReservations()" class="btn btn-primary">再試行</button>
+                </div>
+            `;
+        }
         
         if (typeof displayReservations === 'function') {
             displayReservations();
