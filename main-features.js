@@ -148,11 +148,15 @@ function switchTab(tabName) {
         }
     }
 }
-
-// 予約表示（休憩モード対応版、休止時間除外版）
 function displayReservations() {
+    console.log('[予約表示] displayReservations() 開始');
+    console.log('[予約表示] 現在の予約データ:', reservations);
+    console.log('[予約表示] 予約データ型:', typeof reservations);
+    console.log('[予約表示] 予約データ長:', Array.isArray(reservations) ? reservations.length : 'Array以外');
+
     // 休憩モード時は今日の予約表示を修正
     if (breakMode && breakMode.turn) {
+        console.log('[予約表示] 休憩モード中');
         if (todayReservationsDiv) {
             todayReservationsDiv.innerHTML = `
                 <div style="text-align: center; padding: 20px; background-color: rgba(220, 53, 69, 0.2); border: 2px solid #dc3545; border-radius: 10px; margin: 20px 0;">
@@ -162,34 +166,77 @@ function displayReservations() {
             `;
         }
     } else {
-        // 通常営業時の予約表示（休止時間除外版）
+        // 通常営業時の予約表示（修正版）
         const today = new Date().toISOString().split('T')[0];
+        console.log('[予約表示] 今日の日付:', today);
         
-        // reservations配列が存在することを確認し、休止時間を除外
-        const todayReservations = (reservations && Array.isArray(reservations)) ? 
-            reservations.filter(r => 
-                r.date >= today && 
-                r.states === 0 && 
-                r['Name-f'] !== '休止時間' // 休止時間を除外
-            ).sort((a, b) => {
-                if (a.date === b.date) {
-                    return a.Time.localeCompare(b.Time);
+        // reservations配列の存在確認を強化
+        if (!reservations) {
+            console.warn('[予約表示] reservations がnullまたはundefined');
+            reservations = []; // 空配列で初期化
+        }
+        
+        if (!Array.isArray(reservations)) {
+            console.warn('[予約表示] reservations がArray型ではない:', typeof reservations);
+            // オブジェクトの場合は配列に変換を試行
+            if (typeof reservations === 'object' && reservations !== null) {
+                try {
+                    const keys = Object.keys(reservations);
+                    reservations = keys.map(key => {
+                        const item = reservations[key];
+                        return { ...item, id: item.id || key };
+                    });
+                    console.log('[予約表示] オブジェクトを配列に変換:', reservations.length);
+                } catch (conversionError) {
+                    console.error('[予約表示] 配列変換エラー:', conversionError);
+                    reservations = [];
                 }
-                return a.date.localeCompare(b.date);
-            }) : [];
+            } else {
+                reservations = [];
+            }
+        }
+        
+        // 今日以降の予約をフィルタリング（休止時間を除外）
+        const todayReservations = reservations.filter(r => {
+            if (!r) return false;
+            
+            const isToday = r.date >= today;
+            const isActive = r.states === 0;
+            const isNotBlocked = r['Name-f'] !== '休止時間';
+            
+            console.log(`[予約表示] 予約チェック ${r.id || 'ID不明'}: 日付=${r.date}, 今日以降=${isToday}, アクティブ=${isActive}, 非休止=${isNotBlocked}`);
+            
+            return isToday && isActive && isNotBlocked;
+        }).sort((a, b) => {
+            // 日付と時間でソート
+            if (a.date === b.date) {
+                return a.Time.localeCompare(b.Time);
+            }
+            return a.date.localeCompare(b.date);
+        });
+
+        console.log('[予約表示] フィルタ後の今日の予約:', todayReservations.length);
 
         if (todayReservationsDiv) {
-            todayReservationsDiv.innerHTML = renderReservationsList(todayReservations, 'today');
+            const html = renderReservationsList(todayReservations, 'today');
+            console.log('[予約表示] 生成されたHTML長:', html.length);
+            todayReservationsDiv.innerHTML = html;
+        } else {
+            console.error('[予約表示] todayReservationsDiv が見つかりません');
         }
     }
 
     // 履歴は休止時間を除外
     const historyReservations = getFilteredReservations();
+    console.log('[予約表示] 履歴予約数:', historyReservations.length);
+    
     if (reservationHistoryDiv) {
-        reservationHistoryDiv.innerHTML = renderReservationsList(historyReservations, 'history');
+        const historyHtml = renderReservationsList(historyReservations, 'history');
+        reservationHistoryDiv.innerHTML = historyHtml;
+    } else {
+        console.error('[予約表示] reservationHistoryDiv が見つかりません');
     }
 }
-
 // 検索フィルター適用（休止時間除外版）
 function getFilteredReservations() {
     // reservations配列が存在することを確認
