@@ -232,24 +232,23 @@ async function loadInitialData() {
     }
 }
 
+// 予約データ読み込み（タイムアウト付き）
 async function loadReservations() {
     try {
         console.log('[Auth] 予約データ読み込み開始');
         
-        // 3ヶ月前から1ヶ月後までのデータのみ取得
-        const today = new Date();
-        const fromDate = new Date(today.getFullYear(), today.getMonth() - 3, 1).toISOString().split('T')[0];
-        const toDate = new Date(today.getFullYear(), today.getMonth() + 2, 0).toISOString().split('T')[0];
-        
+        // 10秒タイムアウトを設定
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // タイムアウト延長
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            console.error('[Auth] 予約データ読み込みタイムアウト');
+        }, 10000);
         
-        console.log(`[Auth] 予約データ取得範囲: ${fromDate} ～ ${toDate}`);
-        
-        // クエリパラメータで期間制限
-        const response = await fetch(`${API_BASE_URL}/reservations?from=${fromDate}&to=${toDate}`, {
+        const response = await fetch(`${API_BASE_URL}/reservations`, {
             signal: controller.signal,
-            headers: { 'Accept': 'application/json' }
+            headers: {
+                'Accept': 'application/json'
+            }
         });
         
         clearTimeout(timeoutId);
@@ -259,88 +258,39 @@ async function loadReservations() {
         }
         
         const data = await response.json();
-        console.log('[Auth] API応答データ:', data);
-        console.log('[Auth] API応答タイプ:', typeof data);
         
-        // データの形式を確認
         if (Array.isArray(data)) {
             reservations = data;
-            console.log(`[Auth] 予約データ読み込み成功: ${data.length}件 (${fromDate}～${toDate})`);
-        } else if (data && typeof data === 'object') {
-            // オブジェクト形式の場合
-            if (data.reservations && Array.isArray(data.reservations)) {
-                reservations = data.reservations;
-                console.log(`[Auth] 予約データ読み込み成功: ${data.reservations.length}件 (オブジェクト形式)`);
-            } else if (data.success && data.data && Array.isArray(data.data)) {
-                reservations = data.data;
-                console.log(`[Auth] 予約データ読み込み成功: ${data.data.length}件 (success形式)`);
-            } else {
-                // オブジェクトのプロパティを配列に変換
-                const keys = Object.keys(data);
-                reservations = keys.map(key => {
-                    const item = data[key];
-                    if (typeof item === 'object' && item !== null) {
-                        return { ...item, id: item.id || key };
-                    }
-                    return null;
-                }).filter(item => item !== null);
-                console.log(`[Auth] オブジェクトから配列に変換: ${reservations.length}件`);
+            console.log(`[Auth] 予約データ読み込み成功: ${data.length}件`);
+            
+            // 表示更新
+            if (typeof displayReservations === 'function') {
+                displayReservations();
             }
         } else {
-            console.warn('[Auth] 予期しないデータ形式:', data);
+            console.warn('[Auth] 予約データが配列ではありません:', typeof data);
             reservations = [];
-        }
-        
-        // 表示を更新
-        if (typeof displayReservations === 'function') {
-            displayReservations();
         }
         
     } catch (error) {
         console.error('[Auth] 予約データ読み込みエラー:', error);
+        reservations = [];
         
-        // エラー時もreservationsを初期化
-        if (!Array.isArray(reservations)) {
-            reservations = [];
+        // エラーの種類に応じて処理
+        if (error.name === 'AbortError') {
+            console.error('[Auth] リクエストタイムアウト');
         }
         
-        // UIにエラー表示
-        if (todayReservationsDiv) {
-            todayReservationsDiv.innerHTML = `
-                <div style="color: #dc3545; text-align: center; padding: 20px; border: 2px solid #dc3545; border-radius: 8px;">
-                    <h4>予約データの読み込みに失敗しました</h4>
-                    <p>エラー: ${error.message}</p>
-                    <button onclick="loadReservations()" class="btn btn-primary">再試行</button>
-                </div>
-            `;
-        }
-        
+        // 表示は空の状態で更新
         if (typeof displayReservations === 'function') {
             displayReservations();
         }
     }
 }
 
-// グローバル変数に追加
-let menuCache = { data: null, timestamp: 0 };
-let templateCache = { data: null, timestamp: 0 };
-const CACHE_DURATION = 10 * 60 * 1000; // 10分
-
-// loadMenus関数を修正
+// メニューデータ読み込み（タイムアウト付き）
 async function loadMenus() {
     try {
-        // キャッシュチェック
-        const now = Date.now();
-        if (menuCache.data && (now - menuCache.timestamp) < CACHE_DURATION) {
-            console.log('[Auth] メニューキャッシュを使用');
-            currentMenus = menuCache.data;
-            
-            if (typeof displayMenus === 'function') {
-                displayMenus(currentMenus);
-            }
-            return;
-        }
-        
         console.log('[Auth] メニューデータ読み込み開始');
         
         const controller = new AbortController();
@@ -355,20 +305,31 @@ async function loadMenus() {
         if (response.ok) {
             const menus = await response.json();
             currentMenus = menus || {};
-            
-            // キャッシュに保存
-            menuCache = { data: currentMenus, timestamp: now };
-            
             console.log(`[Auth] メニューデータ読み込み成功: ${Object.keys(currentMenus).length}個`);
             
             if (typeof displayMenus === 'function') {
                 displayMenus(menus);
             }
+            
+            // カレンダーが表示されている場合は更新
+            const calendarTab = document.getElementById('calendar-tab');
+            if (calendarTab && calendarTab.classList.contains('active')) {
+                setTimeout(() => {
+                    if (typeof renderCalendar === 'function') {
+                        renderCalendar();
+                    }
+                    if (typeof renderMenuLegend === 'function') {
+                        renderMenuLegend();
+                    }
+                }, 50);
+            }
+        } else {
+            throw new Error(`HTTP ${response.status}`);
         }
         
     } catch (error) {
         console.error('[Auth] メニューデータ読み込みエラー:', error);
-        currentMenus = menuCache.data || {};
+        currentMenus = {};
     }
 }
 
