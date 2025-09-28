@@ -293,14 +293,23 @@ function handleClearSearch() {
     if (searchDateToInput) searchDateToInput.value = '';
     displayReservations();
 }
-
-// 予約リストHTML生成（電話番号対応版）
 function renderReservationsList(reservationsList, type) {
-    if (!reservationsList || reservationsList.length === 0) {
-        return '<p>予約がありません。</p>';
+    console.log(`[予約リスト] renderReservationsList開始: ${type}, 件数: ${reservationsList ? reservationsList.length : 'null'}`);
+    
+    if (!reservationsList || !Array.isArray(reservationsList) || reservationsList.length === 0) {
+        const emptyMessage = type === 'today' ? '今日の予約がありません。' : '予約がありません。';
+        console.log(`[予約リスト] 空のリスト: ${emptyMessage}`);
+        return `<p style="text-align: center; color: #888; padding: 20px;">${emptyMessage}</p>`;
     }
 
-    return reservationsList.map(reservation => {
+    const renderedItems = reservationsList.map((reservation, index) => {
+        console.log(`[予約リスト] 予約 ${index + 1}/${reservationsList.length}:`, reservation);
+        
+        if (!reservation || typeof reservation !== 'object') {
+            console.warn(`[予約リスト] 無効な予約データ:`, reservation);
+            return '';
+        }
+        
         const statusText = getStatusText(reservation.states);
         const statusClass = getStatusClass(reservation.states);
         const customerName = reservation['Name-f'] || '';
@@ -332,11 +341,11 @@ function renderReservationsList(reservationsList, type) {
         return `
             <div class="reservation-item">
                 <div class="reservation-header">
-                    <span class="reservation-time">${reservation.Time}</span>
+                    <span class="reservation-time">${reservation.Time || '時間不明'}</span>
                     <span class="reservation-status ${statusClass}">${statusText}</span>
                 </div>
                 <div class="reservation-info">
-                    <div><strong>日付:</strong> ${reservation.date}</div>
+                    <div><strong>日付:</strong> ${reservation.date || '日付不明'}</div>
                     <div><strong>お名前:</strong> ${customerName}</div>
                     <div><strong>電話番号:</strong> ${phoneNumber}</div>
                     <div><strong>メニュー:</strong> ${reservation.Menu || ''}</div>
@@ -348,7 +357,10 @@ function renderReservationsList(reservationsList, type) {
                 </div>
             </div>
         `;
-    }).join('');
+    }).filter(html => html !== '').join('');
+
+    console.log(`[予約リスト] 生成完了: ${renderedItems.length > 0 ? 'HTML生成済み' : '空のHTML'}`);
+    return renderedItems || `<p style="text-align: center; color: #888; padding: 20px;">表示できる予約がありません。</p>`;
 }
 
 // ステータステキスト取得
