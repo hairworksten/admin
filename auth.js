@@ -277,9 +277,26 @@ async function loadReservations() {
     }
 }
 
-// メニューデータ読み込み（タイムアウト付き）
+// グローバル変数に追加
+let menuCache = { data: null, timestamp: 0 };
+let templateCache = { data: null, timestamp: 0 };
+const CACHE_DURATION = 10 * 60 * 1000; // 10分
+
+// loadMenus関数を修正
 async function loadMenus() {
     try {
+        // キャッシュチェック
+        const now = Date.now();
+        if (menuCache.data && (now - menuCache.timestamp) < CACHE_DURATION) {
+            console.log('[Auth] メニューキャッシュを使用');
+            currentMenus = menuCache.data;
+            
+            if (typeof displayMenus === 'function') {
+                displayMenus(currentMenus);
+            }
+            return;
+        }
+        
         console.log('[Auth] メニューデータ読み込み開始');
         
         const controller = new AbortController();
@@ -294,31 +311,20 @@ async function loadMenus() {
         if (response.ok) {
             const menus = await response.json();
             currentMenus = menus || {};
+            
+            // キャッシュに保存
+            menuCache = { data: currentMenus, timestamp: now };
+            
             console.log(`[Auth] メニューデータ読み込み成功: ${Object.keys(currentMenus).length}個`);
             
             if (typeof displayMenus === 'function') {
                 displayMenus(menus);
             }
-            
-            // カレンダーが表示されている場合は更新
-            const calendarTab = document.getElementById('calendar-tab');
-            if (calendarTab && calendarTab.classList.contains('active')) {
-                setTimeout(() => {
-                    if (typeof renderCalendar === 'function') {
-                        renderCalendar();
-                    }
-                    if (typeof renderMenuLegend === 'function') {
-                        renderMenuLegend();
-                    }
-                }, 50);
-            }
-        } else {
-            throw new Error(`HTTP ${response.status}`);
         }
         
     } catch (error) {
         console.error('[Auth] メニューデータ読み込みエラー:', error);
-        currentMenus = {};
+        currentMenus = menuCache.data || {};
     }
 }
 
