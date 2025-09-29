@@ -242,7 +242,7 @@ async function loadReservations() {
         const timeoutId = setTimeout(() => {
             controller.abort();
             console.error('[Auth] 予約データ読み込みタイムアウト');
-        }, 10000);
+        }, 100000);
         
         const response = await fetch(`${API_BASE_URL}/reservations`, {
             signal: controller.signal,
