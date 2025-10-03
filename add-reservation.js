@@ -171,7 +171,6 @@ function openAddReservationModal() {
     // フォームをリセット
     resetAddReservationForm();
     
-    // 日付制限を撤廃（管理者権限）
     if (addReservationDateInput) {
         addReservationDateInput.removeAttribute('min');
         addReservationDateInput.removeAttribute('max');
@@ -181,15 +180,13 @@ function openAddReservationModal() {
         addReservationDateInput.setAttribute('min', farPast);
         addReservationDateInput.setAttribute('max', farFuture);
         
-        const today = new Date();
-        const todayString = today.toISOString().split('T')[0];
-        addReservationDateInput.value = todayString;
+        // 日付を空にする（選択されていない状態）
+        addReservationDateInput.value = '';
         
         addReservationDateInput.setCustomValidity('');
         
-        console.log('[予約追加] 日付制限を撤廃');
+        console.log('[予約追加] 日付制限を撤廃、初期値は空');
     }
-    
     // メニューデータが利用可能かチェック
     console.log('[予約追加] モーダル表示前のメニューデータ確認:', {
         currentMenusExists: !!currentMenus,
