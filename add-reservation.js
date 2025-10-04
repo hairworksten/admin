@@ -781,7 +781,7 @@ function generateReservationNumber() {
     return Math.floor(Math.random() * 90000000) + 10000000;
 }
 
-// 予約追加処理（重複処理防止版）
+// 予約追加処理（エラーハンドリング改善版）
 async function handleAddReservation() {
     console.log('[予約追加] 予約追加処理開始');
     
@@ -837,19 +837,16 @@ async function handleAddReservation() {
         return;
     }
     
-    // 選択されたメニューの詳細を取得（修正版 - フォールバック対応）
+    // 選択されたメニューの詳細を取得
     let selectedMenu = null;
     
-    // currentMenusから取得を試行
     if (currentMenus && typeof currentMenus === 'object') {
         selectedMenu = currentMenus[menuName];
     }
     
-    // フォールバック用のメニューデータ
     if (!selectedMenu) {
         console.warn('[予約追加] currentMenusからメニューが見つかりません。フォールバックデータを使用');
         
-        // デフォルトメニューデータ（実際の運用では事前に定義しておく）
         const fallbackMenus = {
             'カット': { worktime: 30, fare: 3000 },
             'カット＋シャンプー': { worktime: 45, fare: 4000 },
@@ -860,7 +857,6 @@ async function handleAddReservation() {
         selectedMenu = fallbackMenus[menuName];
         
         if (!selectedMenu) {
-            // それでも見つからない場合はデフォルト値
             selectedMenu = {
                 worktime: 60,
                 fare: 5000
@@ -871,7 +867,7 @@ async function handleAddReservation() {
     
     console.log('[予約追加] 使用するメニューデータ:', { menuName, selectedMenu });
     
-    // 送信ボタンを無効化（視覚的フィードバック改善）
+    // 送信ボタンを無効化
     if (submitAddReservationBtn) {
         submitAddReservationBtn.disabled = true;
         submitAddReservationBtn.textContent = '📝 予約追加中...';
@@ -915,8 +911,16 @@ async function handleAddReservation() {
         };
         
         console.log('[予約追加] 予約データ:', reservationData);
+        console.log('[予約追加] API URL:', API_BASE_URL + '/reservations');
         
-        // API呼び出し（修正版 - レスポンステキストを先に取得）
+        // ★★★ タイムアウト付きfetch ★★★
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => {
+            controller.abort();
+            console.error('[予約追加] リクエストタイムアウト（30秒）');
+        }, 30000); // 30秒タイムアウト
+        
+        // API呼び出し
         const response = await fetch(`${API_BASE_URL}/reservations`, {
             method: 'POST',
             headers: {
@@ -934,8 +938,13 @@ async function handleAddReservation() {
                 customTime: isCustomTime,
                 bypassDateRestriction: true,
                 bypassTimeRestriction: true
-            })
+            }),
+            signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
+        
+        console.log('[予約追加] レスポンスステータス:', response.status, response.statusText);
         
         // レスポンステキストを取得
         const responseText = await response.text();
@@ -992,15 +1001,13 @@ async function handleAddReservation() {
                 // モーダルを閉じる
                 closeAddReservationModal();
                 
-                // 後続処理は非同期で実行（UIブロックを防ぐ）
+                // 後続処理は非同期で実行
                 setTimeout(async () => {
                     try {
-                        // 予約データを再読み込み
                         if (typeof loadReservations === 'function') {
                             await loadReservations();
                         }
                         
-                        // カレンダーを再描画
                         const calendarTab = document.getElementById('calendar-tab');
                         if (calendarTab && calendarTab.classList.contains('active') && typeof renderCalendar === 'function') {
                             renderCalendar();
@@ -1024,12 +1031,14 @@ async function handleAddReservation() {
         let errorMessage = '予約の追加に失敗しました。';
         
         // エラータイプ別の処理
-        if (error.message === 'API_ENDPOINT_NOT_FOUND') {
-            errorMessage = `🔌 APIサーバーに接続できません\n\n考えられる原因:\n• サーバーのURLが間違っている\n• APIサーバーがダウンしている\n• ネットワーク設定の問題\n\n📞 システム管理者にお問い合わせください。`;
+        if (error.name === 'AbortError') {
+            errorMessage = `⏱️ リクエストがタイムアウトしました（30秒）\n\n考えられる原因:\n• APIサーバーが応答していない\n• ネットワークが遅い\n• サーバーの処理が遅延している\n\n📞 システム管理者にお問い合わせください。`;
+        } else if (error.message === 'API_ENDPOINT_NOT_FOUND') {
+            errorMessage = `🔌 APIサーバーに接続できません\n\n📍 接続先: ${API_BASE_URL}/reservations\n\n考えられる原因:\n• サーバーのURLが間違っている\n• APIサーバーがダウンしている\n• ネットワーク設定の問題\n\n📞 システム管理者にお問い合わせください。`;
         } else if (error.message === 'INVALID_JSON_RESPONSE') {
             errorMessage = '🔧 サーバーから無効な応答が返されました。\n📞 システム管理者にお問い合わせください。';
         } else if (error.message.includes('Failed to fetch') || error.name === 'TypeError') {
-            errorMessage = `🌐 ネットワークエラーが発生しました\n\n📡 ネットワーク接続を確認するか、\n⏰ しばらく時間をおいてから再度お試しください。`;
+            errorMessage = `🌐 ネットワークエラーが発生しました\n\n確認事項:\n✓ インターネット接続を確認\n✓ APIサーバーが起動しているか確認\n✓ ファイアウォール設定を確認\n\n⏰ しばらく時間をおいてから再度お試しください。`;
         } else if (error.message.includes('404')) {
             errorMessage = '🔍 APIエンドポイントが見つかりません（404エラー）。\n📞 URL設定を確認してください。';
         } else if (error.message.includes('500')) {
