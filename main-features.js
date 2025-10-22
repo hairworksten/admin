@@ -148,39 +148,37 @@ function switchTab(tabName) {
         }
     }
 }
-
-// 予約表示（休憩モード対応版、休止時間除外版）
+// 予約表示（休憩モード対応版、休止時間除外版）- 修正版
 function displayReservations() {
-    // 休憩モード時は今日の予約表示を修正
-    if (breakMode && breakMode.turn) {
-        if (todayReservationsDiv) {
-            todayReservationsDiv.innerHTML = `
-                <div style="text-align: center; padding: 20px; background-color: rgba(220, 53, 69, 0.2); border: 2px solid #dc3545; border-radius: 10px; margin: 20px 0;">
-                    <h3 style="color: #dc3545; margin-bottom: 10px;">現在休憩中です</h3>
-                    <p style="color: #ffffff; font-size: 1.1em;">${breakMode.custom || ''}</p>
+    const today = new Date().toISOString().split('T')[0];
+    
+    // reservations配列が存在することを確認し、休止時間を除外
+    const todayReservations = (reservations && Array.isArray(reservations)) ? 
+        reservations.filter(r => 
+            r.date >= today && 
+            r.states === 0 && 
+            r['Name-f'] !== '休止時間' // 休止時間を除外
+        ).sort((a, b) => {
+            if (a.date === b.date) {
+                return a.Time.localeCompare(b.Time);
+            }
+            return a.date.localeCompare(b.date);
+        }) : [];
+
+    // 予約一覧を常に表示
+    if (todayReservationsDiv) {
+        // 休憩モード時は警告バナーを追加
+        let breakModeWarning = '';
+        if (breakMode && breakMode.turn) {
+            breakModeWarning = `
+                <div style="text-align: center; padding: 15px; background-color: rgba(220, 53, 69, 0.2); border: 2px solid #dc3545; border-radius: 10px; margin-bottom: 20px;">
+                    <h3 style="color: #dc3545; margin-bottom: 8px;">⚠️ 現在休憩中です</h3>
+                    <p style="color: #ffffff; font-size: 1.1em; margin: 0;">${breakMode.custom || ''}</p>
                 </div>
             `;
         }
-    } else {
-        // 通常営業時の予約表示（休止時間除外版）
-        const today = new Date().toISOString().split('T')[0];
         
-        // reservations配列が存在することを確認し、休止時間を除外
-        const todayReservations = (reservations && Array.isArray(reservations)) ? 
-            reservations.filter(r => 
-                r.date >= today && 
-                r.states === 0 && 
-                r['Name-f'] !== '休止時間' // 休止時間を除外
-            ).sort((a, b) => {
-                if (a.date === b.date) {
-                    return a.Time.localeCompare(b.Time);
-                }
-                return a.date.localeCompare(b.date);
-            }) : [];
-
-        if (todayReservationsDiv) {
-            todayReservationsDiv.innerHTML = renderReservationsList(todayReservations, 'today');
-        }
+        todayReservationsDiv.innerHTML = breakModeWarning + renderReservationsList(todayReservations, 'today');
     }
 
     // 履歴は休止時間を除外
