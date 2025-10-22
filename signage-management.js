@@ -353,7 +353,7 @@ async function handleUpdateCustomMessage() {
         isUpdatingCustomMessage = false;
     }
 }
-// ニュース表示切り替え（重複処理防止版）- 修正版
+// ニュース表示切り替え（重複処理防止版）- エラーメッセージ非表示版
 async function toggleNewsDisplay() {
     console.log('[サイネージ管理] ニュース表示切り替え処理開始');
     
@@ -369,7 +369,7 @@ async function toggleNewsDisplay() {
     console.log('[サイネージ管理] 新しいニュース表示状態:', newNewsStatus);
     
     // 確認ダイアログ
-    const confirmMessage = `📺 ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしますか？\n\n${newNewsStatus ? '📰 ニュースが表示されるようます' : '🚫 ニュース表示が停止されます'}`;
+    const confirmMessage = `📺 ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしますか？\n\n${newNewsStatus ? '📰 ニュースが表示されるようになります' : '🚫 ニュース表示が停止されます'}`;
     
     if (!confirm(confirmMessage)) {
         console.log('[サイネージ管理] ニュース表示切り替えキャンセル');
@@ -407,10 +407,10 @@ async function toggleNewsDisplay() {
         console.log('[サイネージ管理] API応答:', data);
         
         if (data.success) {
-            // ★★★ 重要: customSettingsを即座に更新 ★★★
+            // customSettingsを即座に更新
             window.customSettings.news = newNewsStatus;
             
-            // ★★★ データベースから最新の状態を再読み込み ★★★
+            // データベースから最新の状態を再読み込み
             await loadCustomSettingsLocal();
             
             // UIを更新
@@ -426,10 +426,25 @@ async function toggleNewsDisplay() {
         }
     } catch (error) {
         console.error('[サイネージ管理] ニュース表示更新エラー:', error);
-        alert(`❌ ニュース表示設定の更新に失敗しました\n\n🔧 エラー詳細:\n${error.message}`);
         
-        // ★★★ エラー時もデータベースから再読み込み ★★★
+        // ★★★ エラーメッセージを表示せず、サイレントに処理 ★★★
+        // データベースから再読み込みして状態を確認
         await loadCustomSettingsLocal();
+        
+        // 実際にデータベースが更新されているか確認
+        if (window.customSettings.news === newNewsStatus) {
+            // データベースには正しく保存されている場合は成功として扱う
+            console.log('[サイネージ管理] データベースには正しく保存されています');
+            updateSignageUI();
+            
+            // 成功メッセージを表示
+            const successMessage = `✅ ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしました\n\n📺 ${newNewsStatus ? 'ニュースが表示されます' : 'ニュース表示が停止されます'}`;
+            alert(successMessage);
+        } else {
+            // 本当に失敗している場合のみエラーメッセージを表示
+            alert(`❌ ニュース表示設定の更新に失敗しました\n\n現在の状態: ${window.customSettings.news ? 'ON' : 'OFF'}`);
+        }
+        
         updateSignageUI();
     } finally {
         // ボタン再有効化
