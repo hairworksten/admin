@@ -353,8 +353,7 @@ async function handleUpdateCustomMessage() {
         isUpdatingCustomMessage = false;
     }
 }
-
-// ニュース表示切り替え（重複処理防止版）
+// ニュース表示切り替え（重複処理防止版）- 修正版
 async function toggleNewsDisplay() {
     console.log('[サイネージ管理] ニュース表示切り替え処理開始');
     
@@ -370,7 +369,7 @@ async function toggleNewsDisplay() {
     console.log('[サイネージ管理] 新しいニュース表示状態:', newNewsStatus);
     
     // 確認ダイアログ
-    const confirmMessage = `📺 ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしますか？\n\n${newNewsStatus ? '📰 ニュースが表示されるようになります' : '🚫 ニュース表示が停止されます'}`;
+    const confirmMessage = `📺 ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしますか？\n\n${newNewsStatus ? '📰 ニュースが表示されるようます' : '🚫 ニュース表示が停止されます'}`;
     
     if (!confirm(confirmMessage)) {
         console.log('[サイネージ管理] ニュース表示切り替えキャンセル');
@@ -408,25 +407,18 @@ async function toggleNewsDisplay() {
         console.log('[サイネージ管理] API応答:', data);
         
         if (data.success) {
+            // ★★★ 重要: customSettingsを即座に更新 ★★★
             window.customSettings.news = newNewsStatus;
             
-            // 成功時のボタン表示
-            if (elements.toggleNewsDisplayBtn) {
-                const successIcon = newNewsStatus ? '✅📰' : '✅🚫';
-                elements.toggleNewsDisplayBtn.textContent = `${successIcon} 更新完了`;
-                elements.toggleNewsDisplayBtn.style.backgroundColor = '#28a745';
-                elements.toggleNewsDisplayBtn.style.color = '#ffffff';
-            }
+            // ★★★ データベースから最新の状態を再読み込み ★★★
+            await loadCustomSettingsLocal();
             
-            // 少し遅延してUIを更新
-            setTimeout(() => {
-                updateSignageUI();
-                
-                // 成功メッセージを表示（1回のみ）
-                const successMessage = `✅ ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしました\n\n📺 ${newNewsStatus ? 'ニュースが表示されます' : 'ニュース表示が停止されます'}`;
-                alert(successMessage);
-                
-            }, 1000);
+            // UIを更新
+            updateSignageUI();
+            
+            // 成功メッセージを表示（1回のみ）
+            const successMessage = `✅ ニュース表示を${newNewsStatus ? 'ON' : 'OFF'}にしました\n\n📺 ${newNewsStatus ? 'ニュースが表示されます' : 'ニュース表示が停止されます'}`;
+            alert(successMessage);
             
             console.log('[サイネージ管理] ニュース表示切り替え成功');
         } else {
@@ -435,6 +427,10 @@ async function toggleNewsDisplay() {
     } catch (error) {
         console.error('[サイネージ管理] ニュース表示更新エラー:', error);
         alert(`❌ ニュース表示設定の更新に失敗しました\n\n🔧 エラー詳細:\n${error.message}`);
+        
+        // ★★★ エラー時もデータベースから再読み込み ★★★
+        await loadCustomSettingsLocal();
+        updateSignageUI();
     } finally {
         // ボタン再有効化
         if (elements.toggleNewsDisplayBtn) {
@@ -443,16 +439,10 @@ async function toggleNewsDisplay() {
             elements.toggleNewsDisplayBtn.style.cursor = 'pointer';
         }
         
-        // UIを元に戻す（少し遅延）
-        setTimeout(() => {
-            updateSignageUI();
-        }, 1500);
-        
         // 処理完了フラグをリセット
         isTogglingNewsDisplay = false;
     }
 }
-
 // リアルタイム更新処理（外部から呼び出される）
 function handleCustomMessageUpdate(data) {
     if (data && data.message !== undefined) {
