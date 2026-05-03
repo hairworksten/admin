@@ -8,7 +8,9 @@
 //   - Firestore: signage_photos コレクション（画像メタデータ）, custom/custom（切替間隔）
 //   - Storage:   signage/photos/<uuid>.<ext>
 //
-// 既存の auth.js が `const API_BASE_URL = '...'` をグローバルに公開しているため再利用する。
+// Firebase 設定値はフロントエンドに直接埋め込み（Cloud Run の /firebase-config が 500 を
+// 返すため）。Web SDK の apiKey は秘密情報ではなく、実際のアクセス制御は Firestore/Storage
+// の Security Rules で担保している。
 //
 // === フィーチャーフラグ ===
 // URLクエリパラメータ ?signage_photos=on が付与されている場合のみ機能が有効化される。
@@ -89,19 +91,22 @@ function setStatus(text, kind = 'info') {
         : '#ffffff';
 }
 
+// Firebase Web SDK 用の設定値。
+// Cloud Run バックエンドの /firebase-config エンドポイントが 500 を返すため、
+// Firebase Console で発行された設定をフロントエンドに直接埋め込む。
+// ※ Web SDK の apiKey はクライアント識別子であり秘密情報ではない。
+//   実際のアクセス制御は Firestore/Storage Rules で行っている。
+const FIREBASE_CONFIG = Object.freeze({
+    apiKey: 'AIzaSyCy0XSXqR_DXSzbVDguB4wasju7Kaxbdmk',
+    authDomain: 'degitalsignage-reservation.firebaseapp.com',
+    projectId: 'degitalsignage-reservation',
+    storageBucket: 'degitalsignage-reservation.firebasestorage.app',
+    messagingSenderId: '676711147915',
+    appId: '1:676711147915:web:737bc702001d44ffa2e78e',
+});
+
 async function loadFirebaseConfig() {
-    if (typeof API_BASE_URL === 'undefined') {
-        throw new Error('API_BASE_URL が定義されていません（auth.js が読み込まれていない可能性）');
-    }
-    const response = await fetch(`${API_BASE_URL}/firebase-config`);
-    if (!response.ok) {
-        throw new Error(`firebase-config 取得失敗: HTTP ${response.status}`);
-    }
-    const data = await response.json();
-    if (!data.success || !data.config) {
-        throw new Error(`firebase-config 内容不正: ${data.error || 'unknown'}`);
-    }
-    return data.config;
+    return FIREBASE_CONFIG;
 }
 
 async function ensureFirebase() {
