@@ -228,6 +228,29 @@
                 </div>
 
                 <div class="section">
+                    <h2>サイネージ写真管理</h2>
+                    <div class="signage-photos-container">
+                        <p style="color: #ffffff; margin-bottom: 10px;">
+                            店舗サイネージで予約画面と交互に表示するスタイル写真を管理します。
+                        </p>
+                        <div class="signage-photos-form" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 15px;">
+                            <input type="file" id="signage-photo-input" accept="image/*" multiple style="display: none;">
+                            <button id="signage-photo-upload-btn" class="btn btn-primary" type="button">
+                                📷 写真をアップロード
+                            </button>
+                            <label style="color: #ffffff; margin-left: 20px;">切替間隔:</label>
+                            <input type="number" id="signage-photo-interval-input" min="1" max="600" value="10" style="width: 80px;">
+                            <span style="color: #ffffff;">秒</span>
+                            <button id="signage-photo-interval-save-btn" class="btn btn-secondary" type="button">
+                                間隔を保存
+                            </button>
+                        </div>
+                        <div id="signage-photos-status" class="message"></div>
+                        <div id="signage-photos-list" class="signage-photos-list" style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 15px;"></div>
+                    </div>
+                </div>
+
+                <div class="section">
                     <h2>パスワード変更</h2>
                     <div class="password-form">
                         <input type="password" id="old-password" placeholder="現在のパスワード">
@@ -489,6 +512,7 @@
     <script src="add-reservation.js"></script>
     <script src="reservation-blocking.js"></script>
     <script src="signage-management.js"></script>
-    
+    <script type="module" src="signage-photos.js"></script>
+
 </body>
 </html>
