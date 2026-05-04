@@ -11,12 +11,6 @@
 // Firebase 設定値はフロントエンドに直接埋め込み（Cloud Run の /firebase-config が 500 を
 // 返すため）。Web SDK の apiKey は秘密情報ではなく、実際のアクセス制御は Firestore/Storage
 // の Security Rules で担保している。
-//
-// === フィーチャーフラグ ===
-// URLクエリパラメータ ?signage_photos=on が付与されている場合のみ機能が有効化される。
-// 動作確認・Firebase Rules 適用後にこのフラグチェックを削除する想定。
-// 一度フラグONで開いた後は localStorage に記憶され、以降は同じブラウザで自動有効化される。
-//   - 強制無効化: ?signage_photos=off
 
 import { initializeApp, getApps, getApp } from 'https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js';
 import {
@@ -46,30 +40,6 @@ const STORAGE_PREFIX = 'signage/photos';
 const COLLECTION_NAME = 'signage_photos';
 const SETTINGS_DOC_PATH = ['custom', 'custom'];
 const MAX_FILE_BYTES = 10 * 1024 * 1024; // 10MB
-const FEATURE_FLAG_KEY = 'signagePhotosFeatureEnabled';
-const FEATURE_FLAG_PARAM = 'signage_photos';
-
-function isFeatureEnabled() {
-    try {
-        const params = new URLSearchParams(window.location.search);
-        const param = params.get(FEATURE_FLAG_PARAM);
-        if (param === 'on') {
-            try { localStorage.setItem(FEATURE_FLAG_KEY, '1'); } catch (_) {}
-            return true;
-        }
-        if (param === 'off') {
-            try { localStorage.removeItem(FEATURE_FLAG_KEY); } catch (_) {}
-            return false;
-        }
-        try {
-            return localStorage.getItem(FEATURE_FLAG_KEY) === '1';
-        } catch (_) {
-            return false;
-        }
-    } catch (_) {
-        return false;
-    }
-}
 
 const state = {
     initialized: false,
@@ -498,33 +468,13 @@ function bind() {
     return true;
 }
 
-function removeSectionFromDom() {
-    // 「サイネージ写真管理」セクション全体を DOM から取り除く（誤操作防止）
-    try {
-        const list = document.getElementById('signage-photos-list');
-        const section = list?.closest('.section');
-        if (section && section.parentElement) {
-            section.parentElement.removeChild(section);
-        }
-    } catch (err) {
-        console.warn('[サイネージ写真] セクション除去エラー:', err);
-    }
-}
-
 async function initialize() {
-    if (!isFeatureEnabled()) {
-        // フィーチャーフラグ OFF: UIを完全に取り除き、Firebase 初期化も行わない
-        removeSectionFromDom();
-        log('機能フラグOFFのため初期化スキップ（有効化: URLに ?signage_photos=on を付与）');
-        return;
-    }
-
     state.elements = gatherElements();
     if (!bind()) {
         log('要素が見つからないため初期化をスキップ');
         return;
     }
-    log('初期化（機能フラグON）');
+    log('初期化');
 
     try {
         await ensureFirebase();
