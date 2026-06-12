@@ -257,6 +257,9 @@ function renderReservationsList(reservationsList, type) {
         const customerName = reservation['Name-f'] || '';
         const phoneNumber = reservation['Name-s'] || '';
         const email = reservation.mail || '';
+        const hotpepper = isHotPepperReservation(reservation);
+        const itemClass = hotpepper ? 'reservation-item reservation-item-hotpepper' : 'reservation-item';
+        const hotpepperBadge = hotpepper ? '<span class="hotpepper-badge">ホットペッパー</span>' : '';
         
         let actionsHTML = '';
         if (type === 'today' && (!breakMode || !breakMode.turn)) {
@@ -281,9 +284,10 @@ function renderReservationsList(reservationsList, type) {
         }
 
         return `
-            <div class="reservation-item">
+            <div class="${itemClass}">
                 <div class="reservation-header">
                     <span class="reservation-time">${reservation.Time}</span>
+                    ${hotpepperBadge}
                     <span class="reservation-status ${statusClass}">${statusText}</span>
                 </div>
                 <div class="reservation-info">
