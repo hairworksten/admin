@@ -145,6 +145,22 @@
 
             <div id="settings-tab" class="tab-content">
                 <div class="section">
+                    <h2>ホットペッパー連携（Gmail）</h2>
+                    <div class="gmail-link-container">
+                        <p style="color: #ffffff; margin-bottom: 15px;">
+                            ホットペッパーの予約通知メールを受信しているGmailと連携すると、
+                            予約が自動で取り込まれます。
+                        </p>
+                        <div id="gmail-status" class="gmail-status">連携状態を確認中...</div>
+                        <div class="gmail-actions" style="margin-top: 15px;">
+                            <button id="gmail-connect-btn" class="btn btn-primary" style="display: none;">Gmailと連携する</button>
+                            <button id="gmail-disconnect-btn" class="btn btn-danger" style="display: none;">連携を解除</button>
+                        </div>
+                        <div id="gmail-message" class="message"></div>
+                    </div>
+                </div>
+
+                <div class="section">
                     <h2>予約受付管理</h2>
                     <div class="block-reservation-container">
                         <div class="block-reservation-form">
@@ -512,6 +528,7 @@
     <script src="add-reservation.js"></script>
     <script src="reservation-blocking.js"></script>
     <script src="signage-management.js"></script>
+    <script src="gmail-link.js"></script>
     <script type="module" src="signage-photos.js"></script>
 
 </body>
