@@ -558,6 +558,25 @@
     transform: translateY(-2px);
 }
 
+/* ホットペッパー経由予約（一覧） */
+.reservation-item-hotpepper {
+    border-color: #e4007f;
+    border-left-width: 6px;
+}
+
+.reservation-item-hotpepper:hover {
+    border-color: #e4007f;
+}
+
+.hotpepper-badge {
+    background-color: #e4007f;
+    color: #ffffff;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
 .reservation-header {
     display: flex;
     justify-content: space-between;

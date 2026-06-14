@@ -3,9 +3,17 @@ const API_BASE_URL = 'https://reservation-api-v2-knn6yth7rq-an.a.run.app/api';
 
 // メニューカラー定義
 const MENU_COLORS = [
-    '#ff6b35', '#28a745', '#dc3545', '#6f42c1', 
+    '#ff6b35', '#28a745', '#dc3545', '#6f42c1',
     '#20c997', '#fd7e14', '#007bff', '#ffc107'
 ];
+
+// ホットペッパー経由予約の識別色（メニュー色と被らないマゼンタ系）
+const HOTPEPPER_COLOR = '#e4007f';
+
+// 予約がホットペッパー経由かどうか
+function isHotPepperReservation(reservation) {
+    return !!(reservation && reservation.source === 'hotpepper');
+}
 
 // ユーティリティ関数
 function getMenuColorByIndex(index) {

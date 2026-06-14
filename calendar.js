@@ -271,13 +271,23 @@ function renderCalendar() {
                 normalReservations.forEach(reservation => {
                     const reservationElement = document.createElement('button');
                     reservationElement.className = 'reservation-item-calendar';
-                    
+
                     const customerName = reservation['Name-f'] || '';
-                    reservationElement.textContent = `${reservation.Time} ${customerName}`;
-                    
-                    // 修正：安全なメニューカラー取得
-                    const menuColor = getMenuColorSafe(reservation.Menu);
-                    reservationElement.style.backgroundColor = menuColor;
+                    const hotpepper = isHotPepperReservation(reservation);
+                    // ホットペッパー予約は識別記号[HP]を付ける（色だけに頼らない）
+                    const prefix = hotpepper ? '[HP] ' : '';
+                    reservationElement.textContent = `${prefix}${reservation.Time} ${customerName}`;
+
+                    // ホットペッパー予約は専用色、それ以外はメニュー色
+                    if (hotpepper) {
+                        reservationElement.classList.add('reservation-hotpepper');
+                        reservationElement.style.backgroundColor = HOTPEPPER_COLOR;
+                        reservationElement.title = 'ホットペッパー経由の予約';
+                    } else {
+                        // 修正：安全なメニューカラー取得
+                        const menuColor = getMenuColorSafe(reservation.Menu);
+                        reservationElement.style.backgroundColor = menuColor;
+                    }
                     reservationElement.style.color = '#ffffff';
                     
                     reservationElement.addEventListener('click', () => {
@@ -306,9 +316,21 @@ function renderMenuLegend() {
     if (!menuLegend) return;
     
     menuLegend.innerHTML = '<h4>メニュー凡例</h4>';
-    
+
     const legendGrid = document.createElement('div');
     legendGrid.className = 'legend-grid';
+
+    // ホットペッパー予約の凡例（メニューとは別枠で固定表示）
+    const hpLegendItem = document.createElement('div');
+    hpLegendItem.className = 'legend-item';
+    const hpColorBox = document.createElement('div');
+    hpColorBox.className = 'legend-color';
+    hpColorBox.style.backgroundColor = HOTPEPPER_COLOR;
+    const hpNameSpan = document.createElement('span');
+    hpNameSpan.textContent = 'ホットペッパー予約 [HP]';
+    hpLegendItem.appendChild(hpColorBox);
+    hpLegendItem.appendChild(hpNameSpan);
+    legendGrid.appendChild(hpLegendItem);
     
     // currentMenusが存在し、オブジェクトであることを確認
     if (currentMenus && typeof currentMenus === 'object') {
