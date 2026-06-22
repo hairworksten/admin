@@ -114,12 +114,14 @@
     
     .tabs {
         gap: 5px;
+        flex-wrap: nowrap; /* タブを1行に収める */
     }
-    
+
     .tab-btn {
-        padding: 12px 20px;
-        font-size: 14px;
-        min-width: 80px;
+        padding: 12px 6px;
+        font-size: 13px;
+        min-width: 0; /* 4タブが1行に収まるよう縮小可 */
+        white-space: nowrap;
     }
     
     .modal-content {
@@ -194,10 +196,18 @@
         font-size: 16px;
     }
     
-    /* カレンダーモバイル対応（見切れ防止） */
+    /* カレンダーモバイル対応（全曜日を画面幅に収める） */
+    /* カレンダーは枠（カード）を完全に外して左右いっぱいに広げる */
+    #calendar-tab .section {
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+    }
+
     .calendar-container {
         width: 100%;
-        overflow-x: auto; /* 横スクロールを有効化 */
+        overflow-x: auto; /* 画面幅に収まらない機種向けのフォールバック */
         -webkit-overflow-scrolling: touch; /* iOSでスムーズスクロール */
         margin-bottom: 30px;
         /* スクロールバーのスタイリング */
@@ -224,21 +234,22 @@
     }
     
     .calendar-grid {
-        min-width: 400px; /* 最小幅を設定してグリッドが潰れるのを防ぐ */
+        min-width: 0; /* 横スクロールせず7列を画面幅に収める */
         width: 100%;
-        grid-template-columns: repeat(7, minmax(55px, 1fr)); /* 各列の最小幅を設定 */
+        gap: 1px;
+        grid-template-columns: repeat(7, minmax(0, 1fr)); /* 全曜日を等幅で表示 */
     }
     
     .calendar-day-header {
-        padding: 8px 2px;
+        padding: 8px 1px;
         font-size: 12px;
-        min-width: 55px; /* ヘッダーの最小幅 */
+        min-width: 0;
     }
-    
+
     .calendar-day {
         min-height: 80px; /* モバイルでは高さを少し小さく */
-        min-width: 55px; /* 各日付セルの最小幅 */
-        padding: 3px;
+        min-width: 0; /* 画面幅に合わせて縮小可能に */
+        padding: 3px 2px;
     }
     
     .reservation-item-calendar {
@@ -314,17 +325,18 @@
 /* 極小画面対応（320px以下） */
 @media (max-width: 320px) {
     .calendar-grid {
-        min-width: 350px; /* より小さい画面でも見切れを防ぐ */
-        grid-template-columns: repeat(7, minmax(50px, 1fr));
+        min-width: 0;
+        gap: 1px;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
     }
-    
+
     .calendar-day {
-        min-width: 50px;
+        min-width: 0;
         min-height: 70px;
     }
-    
+
     .calendar-day-header {
-        min-width: 50px;
+        min-width: 0;
         padding: 6px 1px;
         font-size: 11px;
     }
@@ -554,12 +566,14 @@
     
     .tabs {
         gap: 5px;
+        flex-wrap: nowrap; /* タブを1行に収める */
     }
-    
+
     .tab-btn {
-        padding: 12px 20px;
-        font-size: 14px;
-        min-width: 80px;
+        padding: 12px 6px;
+        font-size: 13px;
+        min-width: 0; /* 4タブが1行に収まるよう縮小可 */
+        white-space: nowrap;
     }
     
     .modal-content {
@@ -634,10 +648,18 @@
         font-size: 16px;
     }
     
-    /* カレンダーモバイル対応（見切れ防止） */
+    /* カレンダーモバイル対応（全曜日を画面幅に収める） */
+    /* カレンダーは枠（カード）を完全に外して左右いっぱいに広げる */
+    #calendar-tab .section {
+        padding: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+    }
+
     .calendar-container {
         width: 100%;
-        overflow-x: auto; /* 横スクロールを有効化 */
+        overflow-x: auto; /* 画面幅に収まらない機種向けのフォールバック */
         -webkit-overflow-scrolling: touch; /* iOSでスムーズスクロール */
         margin-bottom: 30px;
         /* スクロールバーのスタイリング */
@@ -664,21 +686,22 @@
     }
     
     .calendar-grid {
-        min-width: 400px; /* 最小幅を設定してグリッドが潰れるのを防ぐ */
+        min-width: 0; /* 横スクロールせず7列を画面幅に収める */
         width: 100%;
-        grid-template-columns: repeat(7, minmax(55px, 1fr)); /* 各列の最小幅を設定 */
+        gap: 1px;
+        grid-template-columns: repeat(7, minmax(0, 1fr)); /* 全曜日を等幅で表示 */
     }
     
     .calendar-day-header {
-        padding: 8px 2px;
+        padding: 8px 1px;
         font-size: 12px;
-        min-width: 55px; /* ヘッダーの最小幅 */
+        min-width: 0;
     }
-    
+
     .calendar-day {
         min-height: 80px; /* モバイルでは高さを少し小さく */
-        min-width: 55px; /* 各日付セルの最小幅 */
-        padding: 3px;
+        min-width: 0; /* 画面幅に合わせて縮小可能に */
+        padding: 3px 2px;
     }
     
     .reservation-item-calendar {
@@ -775,17 +798,18 @@
     }
     
     .calendar-grid {
-        min-width: 350px; /* より小さい画面でも見切れを防ぐ */
-        grid-template-columns: repeat(7, minmax(50px, 1fr));
+        min-width: 0;
+        gap: 1px;
+        grid-template-columns: repeat(7, minmax(0, 1fr));
     }
-    
+
     .calendar-day {
-        min-width: 50px;
+        min-width: 0;
         min-height: 70px;
     }
-    
+
     .calendar-day-header {
-        min-width: 50px;
+        min-width: 0;
         padding: 6px 1px;
         font-size: 11px;
     }
