@@ -13,6 +13,8 @@ const detailName = document.getElementById('detail-name');
 const detailPhone = document.getElementById('detail-phone');
 const detailMenu = document.getElementById('detail-menu');
 const detailEmail = document.getElementById('detail-email');
+const detailPoints = document.getElementById('detail-points');
+const detailPointsRow = document.getElementById('detail-points-row');
 const detailCancelBtn = document.getElementById('detail-cancel-btn');
 const detailMailBtn = document.getElementById('detail-mail-btn');
 const detailCloseBtn = document.getElementById('detail-close-btn');
@@ -398,7 +400,13 @@ function showReservationDetail(reservation) {
     if (detailPhone) detailPhone.textContent = phoneNumber;
     if (detailMenu) detailMenu.textContent = reservation.Menu || '';
     if (detailEmail) detailEmail.textContent = email;
-    
+    // HPBポイント利用（利用ありのみ行を表示）
+    if (detailPoints && detailPointsRow) {
+        const usedPoints = Number(reservation.usedPoints) || 0;
+        detailPointsRow.style.display = usedPoints > 0 ? '' : 'none';
+        detailPoints.textContent = usedPoints > 0 ? `${usedPoints}P` : '';
+    }
+
     // 同行者や管理者追加の場合はメールボタンを無効化
     if (detailMailBtn) {
         if (email === '同行者' || email === '管理者追加') {

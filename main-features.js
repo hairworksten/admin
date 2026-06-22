@@ -260,7 +260,10 @@ function renderReservationsList(reservationsList, type) {
         const hotpepper = isHotPepperReservation(reservation);
         const itemClass = hotpepper ? 'reservation-item reservation-item-hotpepper' : 'reservation-item';
         const hotpepperBadge = hotpepper ? '<span class="hotpepper-badge">ホットペッパー</span>' : '';
-        
+        // HPBポイント利用（利用ありの予約のみ表示）
+        const usedPoints = Number(reservation.usedPoints) || 0;
+        const pointBadge = usedPoints > 0 ? '<span class="point-badge">P利用</span>' : '';
+
         let actionsHTML = '';
         if (type === 'today' && (!breakMode || !breakMode.turn)) {
             // 通常営業時のみアクションボタンを表示
@@ -288,6 +291,7 @@ function renderReservationsList(reservationsList, type) {
                 <div class="reservation-header">
                     <span class="reservation-time">${reservation.Time}</span>
                     ${hotpepperBadge}
+                    ${pointBadge}
                     <span class="reservation-status ${statusClass}">${statusText}</span>
                 </div>
                 <div class="reservation-info">
@@ -297,6 +301,7 @@ function renderReservationsList(reservationsList, type) {
                     <div><strong>メニュー:</strong> ${reservation.Menu || ''}</div>
                     <div><strong>作業時間:</strong> ${reservation.WorkTime || ''}分</div>
                     <div><strong>メール:</strong> ${email}</div>
+                    ${usedPoints > 0 ? `<div><strong>ポイント利用:</strong> ${usedPoints}P</div>` : ''}
                 </div>
                 <div class="reservation-actions">
                     ${actionsHTML}
