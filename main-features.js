@@ -262,7 +262,7 @@ function renderReservationsList(reservationsList, type) {
         const hotpepperBadge = hotpepper ? '<span class="hotpepper-badge">ホットペッパー</span>' : '';
         // HPBポイント利用（利用ありの予約のみ表示）
         const usedPoints = Number(reservation.usedPoints) || 0;
-        const pointBadge = usedPoints > 0 ? '<span class="point-badge">P利用</span>' : '';
+        const pointBadge = usedPoints > 0 ? `<span class="point-badge">${usedPoints}P利用</span>` : '';
 
         let actionsHTML = '';
         if (type === 'today' && (!breakMode || !breakMode.turn)) {
