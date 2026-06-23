@@ -291,7 +291,17 @@ function renderCalendar() {
                         reservationElement.style.backgroundColor = menuColor;
                     }
                     reservationElement.style.color = '#ffffff';
-                    
+
+                    // HPBポイント利用マーク（PC=数値「NNNP」/ スマホ=丸バッジ）。先頭に付けて見切れ防止
+                    const calUsedPoints = Number(reservation.usedPoints) || 0;
+                    if (calUsedPoints > 0) {
+                        const pmark = document.createElement('span');
+                        pmark.className = 'cal-point-mark';
+                        pmark.textContent = `${calUsedPoints}P`;
+                        pmark.title = `ポイント利用: ${calUsedPoints}P`;
+                        reservationElement.prepend(pmark);
+                    }
+
                     reservationElement.addEventListener('click', () => {
                         showReservationDetail(reservation);
                     });

@@ -587,6 +587,33 @@
     font-weight: bold;
 }
 
+/* カレンダーのコマ内ポイントマーク（PC=数値バッジ） */
+.cal-point-mark {
+    display: inline-block;
+    background-color: #f5a623;
+    color: #ffffff;
+    font-size: 9px;
+    font-weight: bold;
+    line-height: 1.4;
+    border-radius: 8px;
+    padding: 0 4px;
+    margin-right: 3px;
+    vertical-align: middle;
+}
+
+/* スマホはスペースの都合で数値を隠し、丸バッジのみ表示 */
+@media (max-width: 768px) {
+    .cal-point-mark {
+        width: 9px;
+        height: 9px;
+        padding: 0;
+        margin-right: 2px;
+        border-radius: 50%;
+        font-size: 0;
+        line-height: 0;
+    }
+}
+
 .reservation-header {
     display: flex;
     justify-content: space-between;
