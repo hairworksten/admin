@@ -1268,3 +1268,21 @@
         min-height: 40px;
     }
 }
+
+/* 時刻は予約元・ポイント表示に押し出されず、常に独立した行に表示する。 */
+.reservation-item-calendar .cal-reservation-time {
+    display: block;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.4;
+}
+.reservation-item-calendar .cal-reservation-summary {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.4;
+}
+.reservation-item-calendar:has(.cal-reservation-time) {
+    flex-shrink: 0;
+}
