@@ -277,8 +277,15 @@ function renderCalendar() {
                     const customerName = reservation['Name-f'] || '';
                     const hotpepper = isHotPepperReservation(reservation);
                     // ホットペッパー予約は識別記号[HP]を付ける（色だけに頼らない）
-                    const prefix = hotpepper ? '[HP] ' : '';
-                    reservationElement.textContent = `${prefix}${reservation.Time} ${customerName}`;
+                    const timeLabel = document.createElement('span');
+                    timeLabel.className = 'cal-reservation-time';
+                    timeLabel.textContent = reservation.Time;
+                    reservationElement.appendChild(timeLabel);
+                    const summary = document.createElement('span');
+                    summary.className = 'cal-reservation-summary';
+                    summary.textContent = `${hotpepper ? '[HP] ' : ''}${customerName}`;
+                    reservationElement.appendChild(summary);
+                    reservationElement.setAttribute('aria-label', `${reservation.Time} ${hotpepper ? 'ホットペッパー ' : ''}${customerName}`);
 
                     // ホットペッパー予約は専用色、それ以外はメニュー色
                     if (hotpepper) {
@@ -292,14 +299,14 @@ function renderCalendar() {
                     }
                     reservationElement.style.color = '#ffffff';
 
-                    // HPBポイント利用マーク（PC=数値「NNNP」/ スマホ=丸バッジ）。先頭に付けて見切れ防止
+                    // 時刻を独立表示し、ポイントと予約元は次の行にまとめる
                     const calUsedPoints = Number(reservation.usedPoints) || 0;
                     if (calUsedPoints > 0) {
                         const pmark = document.createElement('span');
                         pmark.className = 'cal-point-mark';
                         pmark.textContent = `${calUsedPoints}P`;
                         pmark.title = `ポイント利用: ${calUsedPoints}P`;
-                        reservationElement.prepend(pmark);
+                        summary.prepend(pmark);
                     }
 
                     reservationElement.addEventListener('click', () => {
