@@ -276,16 +276,8 @@ function renderCalendar() {
 
                     const customerName = reservation['Name-f'] || '';
                     const hotpepper = isHotPepperReservation(reservation);
-                    // ホットペッパー予約は識別記号[HP]を付ける（色だけに頼らない）
-                    const timeLabel = document.createElement('span');
-                    timeLabel.className = 'cal-reservation-time';
-                    timeLabel.textContent = reservation.Time;
-                    reservationElement.appendChild(timeLabel);
-                    const summary = document.createElement('span');
-                    summary.className = 'cal-reservation-summary';
-                    summary.textContent = `${hotpepper ? '[HP] ' : ''}${customerName}`;
-                    reservationElement.appendChild(summary);
-                    reservationElement.setAttribute('aria-label', `${reservation.Time} ${hotpepper ? 'ホットペッパー ' : ''}${customerName}`);
+                    reservationElement.textContent = `${reservation.Time} ${customerName}`;
+                    reservationElement.setAttribute('aria-label', `${reservation.Time} ${customerName}`);
 
                     // ホットペッパー予約は専用色、それ以外はメニュー色
                     if (hotpepper) {
@@ -299,14 +291,14 @@ function renderCalendar() {
                     }
                     reservationElement.style.color = '#ffffff';
 
-                    // 時刻を独立表示し、ポイントと予約元は次の行にまとめる
+                    // ポイント利用マーク
                     const calUsedPoints = Number(reservation.usedPoints) || 0;
                     if (calUsedPoints > 0) {
                         const pmark = document.createElement('span');
                         pmark.className = 'cal-point-mark';
                         pmark.textContent = `${calUsedPoints}P`;
                         pmark.title = `ポイント利用: ${calUsedPoints}P`;
-                        summary.prepend(pmark);
+                        reservationElement.prepend(pmark);
                     }
 
                     reservationElement.addEventListener('click', () => {
@@ -346,7 +338,7 @@ function renderMenuLegend() {
     hpColorBox.className = 'legend-color';
     hpColorBox.style.backgroundColor = HOTPEPPER_COLOR;
     const hpNameSpan = document.createElement('span');
-    hpNameSpan.textContent = 'ホットペッパー予約 [HP]';
+    hpNameSpan.textContent = 'ホットペッパー予約';
     hpLegendItem.appendChild(hpColorBox);
     hpLegendItem.appendChild(hpNameSpan);
     legendGrid.appendChild(hpLegendItem);
